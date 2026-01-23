@@ -20,48 +20,30 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    /**
-     * Cadastro de usuário
-     */
     public void register(RegisterRequestDTO dto) {
 
-        // 1️⃣ Verifica se o e-mail já existe
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("E-mail já cadastrado");
         }
 
-        // 2️⃣ Criptografa a senha
-        String senhaCriptografada = passwordEncoder.encode(dto.getSenha());
-
-        // 3️⃣ Cria o usuário
         Usuario usuario = new Usuario();
         usuario.setEmail(dto.getEmail());
-        usuario.setSenha(senhaCriptografada);
-        usuario.setRole(dto.getRole() != null ? dto.getRole() : "USER");
+        usuario.setSenha(passwordEncoder.encode(dto.getSenha()));
+        usuario.setRole("USER");
 
-        // 4️⃣ Salva no banco
         usuarioRepository.save(usuario);
     }
 
-    /**
-     * Login do usuário
-     */
     public void login(LoginRequestDTO dto) {
 
-        // 1️⃣ Busca usuário pelo e-mail
-        Usuario usuario = usuarioRepository.findByEmail(dto.getEmail())
+        Usuario usuario = usuarioRepository.findAll()
+                .stream()
+                .filter(u -> u.getEmail().equals(dto.getEmail()))
+                .findFirst()
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
 
-        // 2️⃣ Verifica a senha
-        boolean senhaValida = passwordEncoder.matches(
-                dto.getSenha(),
-                usuario.getSenha()
-        );
-
-        if (!senhaValida) {
+        if (!passwordEncoder.matches(dto.getSenha(), usuario.getSenha())) {
             throw new RuntimeException("Senha inválida");
         }
-
-    
     }
 }
