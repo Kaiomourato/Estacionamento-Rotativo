@@ -38,7 +38,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody @Valid RegisterRequestDTO dto) {
-        authService.registrar(dto);
+        authService.register(dto);
         return ResponseEntity.status(201).body("Usuário cadastrado com sucesso");
     }
 }
