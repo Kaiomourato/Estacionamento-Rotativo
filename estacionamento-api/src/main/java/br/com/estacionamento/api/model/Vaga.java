@@ -16,7 +16,10 @@ public class Vaga {
     @Column(nullable = false)
     private boolean ocupada;
 
-    
+    @ManyToOne
+    @JoinColumn(name = "estacionamento_id")
+    private Estacionamento estacionamento;
+
     public Vaga() {
     }
 
@@ -45,5 +48,13 @@ public class Vaga {
 
     public void setOcupada(boolean ocupada) {
         this.ocupada = ocupada;
+    }
+
+    public Estacionamento getEstacionamento() {
+        return estacionamento;
+    }
+
+    public void setEstacionamento(Estacionamento estacionamento) {
+        this.estacionamento = estacionamento;
     }
 }

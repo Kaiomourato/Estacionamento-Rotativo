@@ -24,7 +24,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody @Valid LoginRequestDTO dto) {
+    public ResponseEntity<br.com.estacionamento.api.dto.LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto) {
 
         Authentication authentication = authenticationManager.authenticate(
             new UsernamePasswordAuthenticationToken(
@@ -33,7 +33,14 @@ public class AuthController {
             )
         );
 
-        return ResponseEntity.ok("Login realizado com sucesso");
+        br.com.estacionamento.api.model.Usuario usuario = authService.buscarPorEmail(dto.getEmail());
+
+        return ResponseEntity.ok(new br.com.estacionamento.api.dto.LoginResponseDTO(
+            usuario.getId(),
+            usuario.getEmail(), // Usando email como nome por enquanto
+            usuario.getEmail(),
+            usuario.getRole()
+        ));
     }
 
     @PostMapping("/register")

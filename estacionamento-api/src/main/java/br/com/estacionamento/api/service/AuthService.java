@@ -35,15 +35,15 @@ public class AuthService {
     }
 
     public void login(LoginRequestDTO dto) {
-
-        Usuario usuario = usuarioRepository.findAll()
-                .stream()
-                .filter(u -> u.getEmail().equals(dto.getEmail()))
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        Usuario usuario = buscarPorEmail(dto.getEmail());
 
         if (!passwordEncoder.matches(dto.getSenha(), usuario.getSenha())) {
             throw new RuntimeException("Senha inválida");
         }
+    }
+
+    public Usuario buscarPorEmail(String email) {
+        return usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
     }
 }
