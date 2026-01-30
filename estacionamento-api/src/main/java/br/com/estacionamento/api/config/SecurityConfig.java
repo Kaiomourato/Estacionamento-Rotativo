@@ -19,20 +19,16 @@ import org.springframework.security.config.annotation.authentication.configurati
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http ) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable( ))
-            .cors(Customizer.withDefaults()) // Habilita o CORS para o App Mobile conseguir falar com o Render
+            .csrf(csrf -> csrf.disable())
+            .cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/estacionamentos/**" ).hasRole("ADMIN")
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/**" ).permitAll() 
-                .anyRequest().authenticated()
+                .anyRequest().permitAll()
             )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) 
-            .httpBasic(Customizer.withDefaults( ));
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
-        return http.build( );
+        return http.build();
     }
 
 
