@@ -1,12 +1,17 @@
 package br.com.estacionamento.api.model;
 
 import jakarta.persistence.*;
-import java.util.List;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import java.util.Collection;
+import java.util.List;
 
 @Entity
 @Table(name = "usuarios")
-public class Usuario {
+public class Usuario implements UserDetails { // Implementa UserDetails para a segurança
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -16,14 +21,15 @@ public class Usuario {
     private String email;
 
     @Column(nullable = false)
-    @JsonIgnore // Impede que a senha seja enviada em respostas JSON
+    @JsonIgnore // Nunca envia a senha em respostas JSON por segurança
     private String senha;
 
     @Column(nullable = false)
     private String role;
 
-    @OneToMany(mappedBy = "usuario")
-    @JsonIgnore // Evita loop infinito no JSON
+    // Relacionamento inverso: Um usuário pode ter vários veículos
+    @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)
+    @JsonIgnore // Evita erro de recursividade infinita ao listar
     private List<Veiculo> veiculos;
 
     public Usuario() {}
@@ -34,18 +40,94 @@ public class Usuario {
         this.role = role;
     }
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    // --- MÉTODOS OBRIGATÓRIOS DO USERDETAILS ---
 
-    public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    @Override
+    @JsonIgnore
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        // Define as permissões baseadas na Role
+        if (this.role.equalsIgnoreCase("ADMIN")) {
+            return List.of(
+                new SimpleGrantedAuthority("ROLE_ADMIN"), 
+                new SimpleGrantedAuthority("ROLE_USER")
+            );
+        }
+        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+    }
 
-    public String getSenha() { return senha; }
-    public void setSenha(String senha) { this.senha = senha; }
+    @Override
+    public String getPassword() {
+        return senha;
+    }
 
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
+    @Override
+    public String getUsername() {
+        return email;
+    }
 
-    public List<Veiculo> getVeiculos() { return veiculos; }
-    public void setVeiculos(List<Veiculo> veiculos) { this.veiculos = veiculos; }
+    @Override
+    @JsonIgnore
+    public boolean isAccountNonExpired() {
+        return true; // Conta não expira
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isAccountNonLocked() {
+        return true; // Conta não bloqueia
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isCredentialsNonExpired() {
+        return true; // Senha não expira
+    }
+
+    @Override
+    @JsonIgnore
+    public boolean isEnabled() {
+        return true; // Usuário está ativo
+    }
+
+    // --- GETTERS E SETTERS PADRÃO ---
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getSenha() {
+        return senha;
+    }
+
+    public void setSenha(String senha) {
+        this.senha = senha;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public List<Veiculo> getVeiculos() {
+        return veiculos;
+    }
+
+    public void setVeiculos(List<Veiculo> veiculos) {
+        this.veiculos = veiculos;
+    }
 }

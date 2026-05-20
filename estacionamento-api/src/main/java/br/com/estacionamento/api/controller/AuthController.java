@@ -1,14 +1,20 @@
 package br.com.estacionamento.api.controller;
 
-import br.com.estacionamento.api.dto.LoginRequestDTO;
-import br.com.estacionamento.api.dto.RegisterRequestDTO;
-import br.com.estacionamento.api.service.AuthService;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import br.com.estacionamento.api.dto.LoginRequestDTO;
+import br.com.estacionamento.api.dto.LoginResponseDTO;
+import br.com.estacionamento.api.dto.RegisterRequestDTO;
+import br.com.estacionamento.api.infra.security.TokenService;
+import br.com.estacionamento.api.model.Usuario;
+import br.com.estacionamento.api.service.AuthService;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/auth")
@@ -16,28 +22,25 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final AuthService authService;
+    private final TokenService tokenService;
 
-    public AuthController(AuthenticationManager authenticationManager,
-                          AuthService authService) {
+    public AuthController(AuthenticationManager authenticationManager, AuthService authService, TokenService tokenService) {
         this.authenticationManager = authenticationManager;
         this.authService = authService;
+        this.tokenService = tokenService;
     }
 
     @PostMapping("/login")
-    public ResponseEntity<br.com.estacionamento.api.dto.LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto) {
+    public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto) {
+        var authenticationToken = new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getSenha());
+        var authentication = authenticationManager.authenticate(authenticationToken);
 
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(
-                dto.getEmail(),
-                dto.getSenha()
-            )
-        );
+        var usuario = (Usuario) authentication.getPrincipal();
+        var token = tokenService.gerarToken(usuario);
 
-        br.com.estacionamento.api.model.Usuario usuario = authService.buscarPorEmail(dto.getEmail());
-
-        return ResponseEntity.ok(new br.com.estacionamento.api.dto.LoginResponseDTO(
+        return ResponseEntity.ok(new LoginResponseDTO(
+            token,
             usuario.getId(),
-            usuario.getEmail(), // Usando email como nome por enquanto
             usuario.getEmail(),
             usuario.getRole()
         ));

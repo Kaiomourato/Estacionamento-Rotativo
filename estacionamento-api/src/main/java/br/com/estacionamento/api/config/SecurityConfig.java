@@ -1,5 +1,7 @@
 package br.com.estacionamento.api.config;
 
+import br.com.estacionamento.api.infra.security.SecurityFilter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -11,8 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-
-// --- NOVOS IMPORTS PARA O CORS ---
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -22,51 +23,42 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    @Autowired
+    SecurityFilter securityFilter;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
-            .cors(Customizer.withDefaults()) // Ele vai buscar automaticamente o Bean de CORS abaixo
+            .cors(Customizer.withDefaults())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll()
+                .requestMatchers("/auth/**").permitAll() // Login e Cadastro liberados
+                .requestMatchers("/estacionamentos/**").permitAll() // Públicos
+                .anyRequest().authenticated() // VEÍCULOS AGORA É PROTEGIDO!
             )
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+            .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    // --- NOVO BLOCO: CONFIGURAÇÃO DE CORS PARA O FRONTEND REACT ---
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        
-        // Permite a porta exata onde o seu React/Vite está rodando
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
-        
-        // Permite os métodos HTTP usados na aplicação
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        
-        // Libera os cabeçalhos usados nas requisições
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
-        
-        // Habilita envio de credenciais (necessário para alguns fluxos de autenticação)
         configuration.setAllowCredentials(true);
-        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // Aplica essa regra de liberação para todos os endpoints da sua API
         source.registerCorsConfiguration("/**", configuration);
-        
         return source;
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    public PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
     @Bean
-    public AuthenticationManager authenticationManager(
-        AuthenticationConfiguration config) throws Exception {
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }   
 }
