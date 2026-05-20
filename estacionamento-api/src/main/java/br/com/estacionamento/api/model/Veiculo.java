@@ -26,51 +26,31 @@ public class Veiculo {
     @Column(nullable = false)
     private boolean ativo = true;
 
-    
+    // NOVO: Relacionamento com Usuário
+    @ManyToOne
+    @JoinColumn(name = "usuario_id")
+    private Usuario usuario;
+
     public Veiculo() {}
 
-    
-    public Long getId() {
-        return id;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
 
-    public String getPlaca() {
-        return placa;
-    }
+    public String getPlaca() { return placa; }
+    public void setPlaca(String placa) { this.placa = placa; }
 
-    public void setPlaca(String placa) {
-        this.placa = placa;
-    }
+    public String getModelo() { return modelo; }
+    public void setModelo(String modelo) { this.modelo = modelo; }
 
-    public String getModelo() {
-        return modelo;
-    }
+    public String getCor() { return cor; }
+    public void setCor(String cor) { this.cor = cor; }
 
-    public void setModelo(String modelo) {
-        this.modelo = modelo;
-    }
+    public TipoVeiculo getTipo() { return tipo; }
+    public void setTipo(TipoVeiculo tipo) { this.tipo = tipo; }
 
-    public String getCor() {
-        return cor;
-    }
+    public boolean isAtivo() { return ativo; }
+    public void setAtivo(boolean ativo) { this.ativo = ativo; }
 
-    public void setCor(String cor) {
-        this.cor = cor;
-    }
-
-    public TipoVeiculo getTipo() {
-        return tipo;
-    }
-
-    public void setTipo(TipoVeiculo tipo) {
-        this.tipo = tipo;
-    }
-
-    public boolean isAtivo() {
-        return ativo;
-    }
-
-    public void setAtivo(boolean ativo) {
-        this.ativo = ativo;
-    }
+    public Usuario getUsuario() { return usuario; }
+    public void setUsuario(Usuario usuario) { this.usuario = usuario; }
 }
