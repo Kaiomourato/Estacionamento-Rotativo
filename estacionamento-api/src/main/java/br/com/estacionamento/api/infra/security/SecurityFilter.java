@@ -15,22 +15,30 @@ import java.io.IOException;
 
 @Component
 public class SecurityFilter extends OncePerRequestFilter {
+    
     @Autowired
-    TokenService tokenService;
+    private TokenService tokenService;
+    
     @Autowired
-    UsuarioRepository userRepository;
+    private UsuarioRepository userRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         var token = this.recoverToken(request);
+        
         if(token != null){
             var login = tokenService.validarToken(token);
-            // Aqui buscamos o usuário pelo e-mail extraído do token
-            UserDetails user = userRepository.findByEmail(login)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+            
+            // AJUSTE: Só tenta autenticar se o token retornou um login válido
+            if (login != null && !login.isEmpty()) {
+                UserDetails user = userRepository.findByEmail(login)
+                    .orElse(null);
 
-            var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (user != null) {
+                    var authentication = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
+            }
         }
         filterChain.doFilter(request, response);
     }

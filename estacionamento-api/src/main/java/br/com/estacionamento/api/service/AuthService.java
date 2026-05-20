@@ -4,7 +4,6 @@ import br.com.estacionamento.api.dto.LoginRequestDTO;
 import br.com.estacionamento.api.dto.RegisterRequestDTO;
 import br.com.estacionamento.api.model.Usuario;
 import br.com.estacionamento.api.repository.UsuarioRepository;
-
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -14,14 +13,12 @@ public class AuthService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthService(UsuarioRepository usuarioRepository,
-                       PasswordEncoder passwordEncoder) {
+    public AuthService(UsuarioRepository usuarioRepository, PasswordEncoder passwordEncoder) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
     public void register(RegisterRequestDTO dto) {
-
         if (usuarioRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("E-mail já cadastrado");
         }
@@ -34,12 +31,14 @@ public class AuthService {
         usuarioRepository.save(usuario);
     }
 
-    public void login(LoginRequestDTO dto) {
+    // AJUSTADO: Agora retorna o Usuario para o Controller poder gerar o Token
+    public Usuario login(LoginRequestDTO dto) {
         Usuario usuario = buscarPorEmail(dto.getEmail());
 
         if (!passwordEncoder.matches(dto.getSenha(), usuario.getSenha())) {
             throw new RuntimeException("Senha inválida");
         }
+        return usuario;
     }
 
     public Usuario buscarPorEmail(String email) {

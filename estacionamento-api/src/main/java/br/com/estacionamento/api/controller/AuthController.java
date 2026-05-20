@@ -32,12 +32,13 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDTO> login(@RequestBody @Valid LoginRequestDTO dto) {
-        var authenticationToken = new UsernamePasswordAuthenticationToken(dto.getEmail(), dto.getSenha());
-        var authentication = authenticationManager.authenticate(authenticationToken);
+        // 1. O service valida a senha e retorna o usuário
+        br.com.estacionamento.api.model.Usuario usuario = authService.login(dto);
 
-        var usuario = (Usuario) authentication.getPrincipal();
-        var token = tokenService.gerarToken(usuario);
+        // 2. Geramos o token
+        String token = tokenService.gerarToken(usuario);
 
+        // 3. Retornamos o DTO completo
         return ResponseEntity.ok(new LoginResponseDTO(
             token,
             usuario.getId(),
