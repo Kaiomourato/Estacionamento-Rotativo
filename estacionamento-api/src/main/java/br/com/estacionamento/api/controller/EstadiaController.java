@@ -4,7 +4,7 @@ import br.com.estacionamento.api.model.Estadia;
 import br.com.estacionamento.api.service.EstadiaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -17,7 +17,6 @@ public class EstadiaController {
         this.service = service;
     }
 
-    // Iniciar estadia (AGORA RECEBE A PLACA COMO PARÂMETRO)
     @PostMapping
     public ResponseEntity<Estadia> iniciar(
             @RequestParam String placa,
@@ -26,21 +25,26 @@ public class EstadiaController {
         return ResponseEntity.ok(service.iniciar(placa, vagaId));
     }
 
-    // Finalizar estadia
     @PutMapping("/{id}/finalizar")
     public ResponseEntity<Estadia> finalizar(@PathVariable Long id) {
         return ResponseEntity.ok(service.finalizar(id));
     }
 
-    // Listar estadias ativas
     @GetMapping("/ativas")
     public ResponseEntity<List<Estadia>> listarAtivas() {
         return ResponseEntity.ok(service.listarAtivas());
     }
 
-    // Consultar valor atual
     @GetMapping("/{id}/valor")
     public ResponseEntity<Double> consultarValor(@PathVariable Long id) {
         return ResponseEntity.ok(service.consultarValor(id));
+    }
+
+    // NOVO: Rota para o motorista acompanhar sua estadia em tempo real
+    @GetMapping("/minha-ativa")
+    public ResponseEntity<Estadia> buscarMinhaEstadiaAtiva(Principal principal) {
+        String emailLogado = principal.getName();
+        Estadia estadia = service.buscarAtivaPorUsuario(emailLogado);
+        return ResponseEntity.ok(estadia);
     }
 }

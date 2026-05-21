@@ -33,10 +33,8 @@ public class EstadiaService {
         this.vagaRepository = vagaRepository;
     }
 
-    // 🚗 Iniciar estadia (AGORA RECEBE A PLACA)
     public Estadia iniciar(String placa, Long vagaId) {
 
-        // O backend agora assume a responsabilidade de buscar o carro pela placa
         Veiculo veiculo = veiculoRepository.findByPlaca(placa)
                 .orElseThrow(() -> new RuntimeException("Veículo não encontrado com a placa: " + placa));
 
@@ -47,7 +45,6 @@ public class EstadiaService {
             throw new RuntimeException("Vaga já está ocupada");
         }
 
-        // verifica se o veículo já possui estadia ativa
         boolean veiculoJaEstacionado = estadiaRepository.findByAtivaTrue()
                 .stream()
                 .anyMatch(e -> e.getVeiculo().getId().equals(veiculo.getId()));
@@ -68,7 +65,6 @@ public class EstadiaService {
         return estadiaRepository.save(estadia);
     }
 
-    // 🧾 Finalizar estadia
     public Estadia finalizar(Long estadiaId) {
 
         Estadia estadia = estadiaRepository.findById(estadiaId)
@@ -91,7 +87,6 @@ public class EstadiaService {
         return estadiaRepository.save(estadia);
     }
 
-    // 📊 Consultar valor atual
     public double consultarValor(Long estadiaId) {
 
         Estadia estadia = estadiaRepository.findById(estadiaId)
@@ -108,20 +103,29 @@ public class EstadiaService {
         return valor;
     }
 
-    // 📋 Listar estadias ativas
     public List<Estadia> listarAtivas() {
         return estadiaRepository.findByAtivaTrue();
     }
 
-    // 💰 Regra de cálculo por fração
-    private double calcularValor(Estadia estadia) {
+    // NOVO: Buscar a estadia ativa do usuário logado
+    public Estadia buscarAtivaPorUsuario(String email) {
+        Estadia estadia = estadiaRepository.findByAtivaTrueAndVeiculoUsuarioEmail(email)
+                .orElse(null);
 
+        if (estadia != null) {
+            double valorAtual = calcularValor(estadia);
+            estadia.setValor(valorAtual);
+        }
+
+        return estadia;
+    }
+
+    private double calcularValor(Estadia estadia) {
         LocalDateTime fim = estadia.isAtiva()
                 ? LocalDateTime.now()
                 : estadia.getSaida();
 
         long minutos = Duration.between(estadia.getEntrada(), fim).toMinutes();
-
         long fracoes = (long) Math.ceil((double) minutos / MINUTOS_POR_FRACAO);
 
         return fracoes * VALOR_POR_FRACAO;
