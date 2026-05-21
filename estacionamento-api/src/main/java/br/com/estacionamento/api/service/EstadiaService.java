@@ -33,11 +33,12 @@ public class EstadiaService {
         this.vagaRepository = vagaRepository;
     }
 
-    // 🚗 Iniciar estadia
-    public Estadia iniciar(Long veiculoId, Long vagaId) {
+    // 🚗 Iniciar estadia (AGORA RECEBE A PLACA)
+    public Estadia iniciar(String placa, Long vagaId) {
 
-        Veiculo veiculo = veiculoRepository.findById(veiculoId)
-                .orElseThrow(() -> new RuntimeException("Veículo não encontrado"));
+        // O backend agora assume a responsabilidade de buscar o carro pela placa
+        Veiculo veiculo = veiculoRepository.findByPlaca(placa)
+                .orElseThrow(() -> new RuntimeException("Veículo não encontrado com a placa: " + placa));
 
         Vaga vaga = vagaRepository.findById(vagaId)
                 .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
@@ -49,10 +50,10 @@ public class EstadiaService {
         // verifica se o veículo já possui estadia ativa
         boolean veiculoJaEstacionado = estadiaRepository.findByAtivaTrue()
                 .stream()
-                .anyMatch(e -> e.getVeiculo().getId().equals(veiculoId));
+                .anyMatch(e -> e.getVeiculo().getId().equals(veiculo.getId()));
 
         if (veiculoJaEstacionado) {
-            throw new RuntimeException("Veículo já possui uma estadia ativa");
+            throw new RuntimeException("Este veículo já possui uma estadia ativa no pátio.");
         }
 
         Estadia estadia = new Estadia();

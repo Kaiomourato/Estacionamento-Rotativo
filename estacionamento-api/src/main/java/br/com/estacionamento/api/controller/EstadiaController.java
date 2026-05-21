@@ -17,13 +17,13 @@ public class EstadiaController {
         this.service = service;
     }
 
-    // Iniciar estadia
+    // Iniciar estadia (AGORA RECEBE A PLACA COMO PARÂMETRO)
     @PostMapping
     public ResponseEntity<Estadia> iniciar(
-            @RequestParam Long veiculoId,
+            @RequestParam String placa,
             @RequestParam Long vagaId
     ) {
-        return ResponseEntity.ok(service.iniciar(veiculoId, vagaId));
+        return ResponseEntity.ok(service.iniciar(placa, vagaId));
     }
 
     // Finalizar estadia
