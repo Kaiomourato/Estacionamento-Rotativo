@@ -9,6 +9,6 @@ import java.util.Optional;
 public interface VagaRepository extends JpaRepository<Vaga, Long> {
     Optional<Vaga> findByCodigo(String codigo);
     
-    // NOVO: Busca apenas as vagas pertencentes a um estacionamento específico
-    List<Vaga> findByEstacionamentoId(Long estacionamentoId);
+    // No VagaRepository.java, mude a linha do findByEstacionamentoId para:
+    List<Vaga> findByEstacionamentoIdAndAtivoTrue(Long estacionamentoId);
 }

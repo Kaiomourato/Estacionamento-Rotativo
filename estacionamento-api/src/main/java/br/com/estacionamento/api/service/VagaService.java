@@ -22,14 +22,6 @@ public class VagaService {
         return repository.save(vaga);
     }
 
-    // ATUALIZADO: Lista vagas filtrando pelo estacionamento (se informado)
-    public List<Vaga> listarPorEstacionamento(Long estacionamentoId) {
-        if (estacionamentoId != null) {
-            return repository.findByEstacionamentoId(estacionamentoId);
-        }
-        return repository.findAll();
-    }
-
     public Vaga buscarPorId(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
@@ -53,12 +45,21 @@ public class VagaService {
         return repository.save(vaga);
     }
 
-    // NOVO: Função para excluir a vaga do banco de dados
+    // No VagaService.java, ajuste a listagem para usar o método novo:
+    public List<Vaga> listarPorEstacionamento(Long estacionamentoId) {
+        if (estacionamentoId != null) {
+            return repository.findByEstacionamentoIdAndAtivoTrue(estacionamentoId);
+        }
+        return repository.findAll(); // admin pode querer ver tudo
+    }
+
+    // No VagaService.java, modifique a função deletar para o Soft Delete:
     public void deletar(Long id) {
         Vaga vaga = buscarPorId(id);
         if (vaga.isOcupada()) {
             throw new RuntimeException("Não é possível excluir uma vaga que está ocupada no momento.");
         }
-        repository.delete(vaga);
+        vaga.setAtivo(false); // Apenas desativa em vez de apagar do banco!
+        repository.save(vaga);
     }
 }
