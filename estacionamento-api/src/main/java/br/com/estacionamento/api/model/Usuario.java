@@ -11,7 +11,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "usuarios")
-public class Usuario implements UserDetails { // Implementa UserDetails para a segurança
+public class Usuario implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,16 +21,19 @@ public class Usuario implements UserDetails { // Implementa UserDetails para a s
     private String email;
 
     @Column(nullable = false)
-    @JsonIgnore // Nunca envia a senha em respostas JSON por segurança
+    @JsonIgnore
     private String senha;
 
     @Column(nullable = false)
     private String role;
 
-    // Relacionamento inverso: Um usuário pode ter vários veículos
     @OneToMany(mappedBy = "usuario", cascade = CascadeType.ALL)
-    @JsonIgnore // Evita erro de recursividade infinita ao listar
+    @JsonIgnore
     private List<Veiculo> veiculos;
+
+    @ManyToOne
+    @JoinColumn(name = "estacionamento_id")
+    private Estacionamento estacionamento;
 
     public Usuario() {}
 
@@ -40,27 +43,10 @@ public class Usuario implements UserDetails { // Implementa UserDetails para a s
         this.role = role;
     }
 
-    // Adicione isto junto aos outros atributos da classe Usuario
-    @ManyToOne
-    @JoinColumn(name = "estacionamento_id")
-    private Estacionamento estacionamento;
-
-    // Não esqueça de gerar o Getter e o Setter no final do arquivo:
-    public Estacionamento getEstacionamento() {
-        return estacionamento;
-    }
-
-    public void setEstacionamento(Estacionamento estacionamento) {
-        this.estacionamento = estacionamento;
-    }
-
-    // --- MÉTODOS OBRIGATÓRIOS DO USERDETAILS ---
-
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Define as permissões baseadas na Role
-        if (this.role.equalsIgnoreCase("ADMIN")) {
+        if (this.role != null && this.role.equalsIgnoreCase("ADMIN")) {
             return List.of(
                 new SimpleGrantedAuthority("ROLE_ADMIN"), 
                 new SimpleGrantedAuthority("ROLE_USER")
@@ -82,66 +68,42 @@ public class Usuario implements UserDetails { // Implementa UserDetails para a s
     @Override
     @JsonIgnore
     public boolean isAccountNonExpired() {
-        return true; // Conta não expira
+        return true;
     }
 
     @Override
     @JsonIgnore
     public boolean isAccountNonLocked() {
-        return true; // Conta não bloqueia
+        return true;
     }
 
     @Override
     @JsonIgnore
     public boolean isCredentialsNonExpired() {
-        return true; // Senha não expira
+        return true;
     }
 
     @Override
     @JsonIgnore
     public boolean isEnabled() {
-        return true; // Usuário está ativo
+        return true;
     }
 
-    // --- GETTERS E SETTERS PADRÃO ---
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getSenha() {
-        return senha;
-    }
-
-    public void setSenha(String senha) {
-        this.senha = senha;
-    }
-
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
-
-    public List<Veiculo> getVeiculos() {
-        return veiculos;
-    }
-
-    public void setVeiculos(List<Veiculo> veiculos) {
-        this.veiculos = veiculos;
-    }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    
+    public String getSenha() { return senha; }
+    public void setSenha(String senha) { this.senha = senha; }
+    
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+    
+    public List<Veiculo> getVeiculos() { return veiculos; }
+    public void setVeiculos(List<Veiculo> veiculos) { this.veiculos = veiculos; }
+    
+    public Estacionamento getEstacionamento() { return estacionamento; }
+    public void setEstacionamento(Estacionamento estacionamento) { this.estacionamento = estacionamento; }
 }
