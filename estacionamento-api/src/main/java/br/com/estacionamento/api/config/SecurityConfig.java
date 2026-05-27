@@ -4,6 +4,7 @@ import br.com.estacionamento.api.infra.security.SecurityFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod; // <-- Importação necessária
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -33,9 +34,12 @@ public class SecurityConfig {
             .cors(Customizer.withDefaults())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/auth/**").permitAll() // Login e Cadastro liberados
-                .requestMatchers("/estacionamentos/**").permitAll() // Públicos
-                .anyRequest().authenticated() // VEÍCULOS AGORA É PROTEGIDO!
+                // 👇 A MÁGICA ACONTECE AQUI: Liberamos o "batedor" do navegador!
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() 
+                
+                .requestMatchers("/auth/**").permitAll() 
+                .requestMatchers("/estacionamentos/**").permitAll() 
+                .anyRequest().authenticated() 
             )
             .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -45,10 +49,13 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173"));
+        
+        // Mantemos o padrão aberto para não bloquear o Vercel/Netlify/Localhost
+        configuration.setAllowedOriginPatterns(Arrays.asList("*")); 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(Arrays.asList("*")); 
         configuration.setAllowCredentials(true);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
