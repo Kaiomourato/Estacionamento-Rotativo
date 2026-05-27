@@ -40,6 +40,20 @@ public class Usuario implements UserDetails { // Implementa UserDetails para a s
         this.role = role;
     }
 
+    // Adicione isto junto aos outros atributos da classe Usuario
+    @ManyToOne
+    @JoinColumn(name = "estacionamento_id")
+    private Estacionamento estacionamento;
+
+    // Não esqueça de gerar o Getter e o Setter no final do arquivo:
+    public Estacionamento getEstacionamento() {
+        return estacionamento;
+    }
+
+    public void setEstacionamento(Estacionamento estacionamento) {
+        this.estacionamento = estacionamento;
+    }
+
     // --- MÉTODOS OBRIGATÓRIOS DO USERDETAILS ---
 
     @Override
