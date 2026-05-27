@@ -19,8 +19,7 @@ public class EstadiaService {
     private final VeiculoRepository veiculoRepository;
     private final VagaRepository vagaRepository;
 
-    // valor base por fração (exemplo: a cada 30 minutos)
-    private static final double VALOR_POR_FRACAO = 2.50;
+    // A regra de tempo por fração continua a mesma (exemplo: a cada 30 minutos)
     private static final int MINUTOS_POR_FRACAO = 30;
 
     public EstadiaService(
@@ -107,7 +106,6 @@ public class EstadiaService {
         return estadiaRepository.findByAtivaTrue();
     }
 
-    // NOVO: Buscar a estadia ativa do usuário logado
     public Estadia buscarAtivaPorUsuario(String email) {
         Estadia estadia = estadiaRepository.findByAtivaTrueAndVeiculoUsuarioEmail(email)
                 .orElse(null);
@@ -126,8 +124,20 @@ public class EstadiaService {
                 : estadia.getSaida();
 
         long minutos = Duration.between(estadia.getEntrada(), fim).toMinutes();
-        long fracoes = (long) Math.ceil((double) minutos / MINUTOS_POR_FRACAO);
+        
+        // Puxa o valor da hora configurado especificamente para este estacionamento
+        double valorHora = estadia.getVaga().getEstacionamento().getValorHora();
+        
+        // Descobre o preço da fração (Ex: se a hora é R$ 10 e a fração é 30min, a fração custa R$ 5)
+        double valorPorFracao = valorHora / (60.0 / MINUTOS_POR_FRACAO);
 
-        return fracoes * VALOR_POR_FRACAO;
+        long fracoes = (long) Math.ceil((double) minutos / MINUTOS_POR_FRACAO);
+        
+        // Garante que o motorista pague pelo menos a 1ª fração assim que entra
+        if (fracoes == 0) {
+            fracoes = 1;
+        }
+
+        return fracoes * valorPorFracao;
     }
 }
