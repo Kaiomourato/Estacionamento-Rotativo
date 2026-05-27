@@ -15,7 +15,6 @@ public class VagaService {
         this.repository = repository;
     }
 
-    // Cadastrar uma nova vaga
     public Vaga cadastrar(Vaga vaga) {
         if (repository.findByCodigo(vaga.getCodigo()).isPresent()) {
             throw new RuntimeException("Já existe uma vaga com esse código");
@@ -23,18 +22,19 @@ public class VagaService {
         return repository.save(vaga);
     }
 
-    // Listar todas as vagas
-    public List<Vaga> listarTodos() {
+    // ATUALIZADO: Lista vagas filtrando pelo estacionamento (se informado)
+    public List<Vaga> listarPorEstacionamento(Long estacionamentoId) {
+        if (estacionamentoId != null) {
+            return repository.findByEstacionamentoId(estacionamentoId);
+        }
         return repository.findAll();
     }
 
-    // Buscar vaga por ID
     public Vaga buscarPorId(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
     }
 
-    // Ocupar uma vaga
     public Vaga ocuparVaga(Long id) {
         Vaga vaga = buscarPorId(id);
         if (vaga.isOcupada()) {
@@ -44,7 +44,6 @@ public class VagaService {
         return repository.save(vaga);
     }
 
-    // Liberar uma vaga
     public Vaga liberarVaga(Long id) {
         Vaga vaga = buscarPorId(id);
         if (!vaga.isOcupada()) {
@@ -52,5 +51,14 @@ public class VagaService {
         }
         vaga.setOcupada(false);
         return repository.save(vaga);
+    }
+
+    // NOVO: Função para excluir a vaga do banco de dados
+    public void deletar(Long id) {
+        Vaga vaga = buscarPorId(id);
+        if (vaga.isOcupada()) {
+            throw new RuntimeException("Não é possível excluir uma vaga que está ocupada no momento.");
+        }
+        repository.delete(vaga);
     }
 }

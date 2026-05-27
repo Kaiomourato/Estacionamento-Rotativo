@@ -17,33 +17,36 @@ public class VagaController {
         this.service = service;
     }
 
-    // Cadastrar vaga
     @PostMapping
     public ResponseEntity<Vaga> cadastrar(@RequestBody Vaga vaga) {
         return ResponseEntity.ok(service.cadastrar(vaga));
     }
 
-    // Listar todas as vagas
+    // ATUALIZADO: Aceita o ID do estacionamento na URL para filtrar
     @GetMapping
-    public ResponseEntity<List<Vaga>> listar() {
-        return ResponseEntity.ok(service.listarTodos());
+    public ResponseEntity<List<Vaga>> listar(@RequestParam(required = false) Long estacionamentoId) {
+        return ResponseEntity.ok(service.listarPorEstacionamento(estacionamentoId));
     }
 
-    // Buscar vaga por ID
     @GetMapping("/{id}")
     public ResponseEntity<Vaga> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(service.buscarPorId(id));
     }
 
-    // Ocupar vaga
     @PutMapping("/{id}/ocupar")
     public ResponseEntity<Vaga> ocupar(@PathVariable Long id) {
         return ResponseEntity.ok(service.ocuparVaga(id));
     }
 
-    // Liberar vaga
     @PutMapping("/{id}/liberar")
     public ResponseEntity<Vaga> liberar(@PathVariable Long id) {
         return ResponseEntity.ok(service.liberarVaga(id));
+    }
+
+    // NOVO: Rota para deletar a vaga
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletar(@PathVariable Long id) {
+        service.deletar(id);
+        return ResponseEntity.noContent().build();
     }
 }
