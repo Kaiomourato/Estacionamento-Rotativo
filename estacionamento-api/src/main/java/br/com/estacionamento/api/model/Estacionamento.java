@@ -1,6 +1,7 @@
 package br.com.estacionamento.api.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonIgnore; // <-- ADICIONADO
 import java.util.List;
 
 @Entity
@@ -29,6 +30,7 @@ public class Estacionamento {
     @Column(nullable = false)
     private Double valorHora;
 
+    @JsonIgnore // <-- ADICIONADO PARA EVITAR LOOP INFINITO NO JSON
     @OneToMany(mappedBy = "estacionamento")
     private List<Vaga> vagas;
 
@@ -61,3 +63,4 @@ public class Estacionamento {
     public List<Vaga> getVagas() { return vagas; }
     public void setVagas(List<Vaga> vagas) { this.vagas = vagas; }
 }
+
