@@ -10,41 +10,32 @@ import java.util.List;
 @RestController
 @RequestMapping("/estadias")
 public class EstadiaController {
-
+    
     private final EstadiaService service;
 
     public EstadiaController(EstadiaService service) {
         this.service = service;
     }
 
+    // Rota do Motorista
+    @GetMapping("/minha-ativa")
+    public ResponseEntity<Estadia> buscarMinhaAtiva(Principal principal) {
+        return ResponseEntity.ok(service.buscarEstadiaAtivaDoMotorista(principal.getName()));
+    }
+
+    // AGORA É ISOLADO: Rota do Operador lista só os carros do pátio dele
+    @GetMapping("/ativas")
+    public ResponseEntity<List<Estadia>> listarAtivas(Principal principal) {
+        return ResponseEntity.ok(service.listarAtivasPorOperador(principal.getName()));
+    }
+
     @PostMapping
-    public ResponseEntity<Estadia> iniciar(
-            @RequestParam String placa,
-            @RequestParam Long vagaId
-    ) {
-        return ResponseEntity.ok(service.iniciar(placa, vagaId));
+    public ResponseEntity<Estadia> registrarEntrada(@RequestParam String placa, @RequestParam Long vagaId) {
+        return ResponseEntity.ok(service.registrarEntrada(placa, vagaId));
     }
 
     @PutMapping("/{id}/finalizar")
-    public ResponseEntity<Estadia> finalizar(@PathVariable Long id) {
-        return ResponseEntity.ok(service.finalizar(id));
-    }
-
-    @GetMapping("/ativas")
-    public ResponseEntity<List<Estadia>> listarAtivas() {
-        return ResponseEntity.ok(service.listarAtivas());
-    }
-
-    @GetMapping("/{id}/valor")
-    public ResponseEntity<Double> consultarValor(@PathVariable Long id) {
-        return ResponseEntity.ok(service.consultarValor(id));
-    }
-
-    // NOVO: Rota para o motorista acompanhar sua estadia em tempo real
-    @GetMapping("/minha-ativa")
-    public ResponseEntity<Estadia> buscarMinhaEstadiaAtiva(Principal principal) {
-        String emailLogado = principal.getName();
-        Estadia estadia = service.buscarAtivaPorUsuario(emailLogado);
-        return ResponseEntity.ok(estadia);
+    public ResponseEntity<Estadia> finalizarEstadia(@PathVariable Long id) {
+        return ResponseEntity.ok(service.finalizarEstadia(id));
     }
 }

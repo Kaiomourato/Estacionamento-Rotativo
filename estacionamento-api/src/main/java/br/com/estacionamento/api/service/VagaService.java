@@ -1,7 +1,9 @@
 package br.com.estacionamento.api.service;
 
 import br.com.estacionamento.api.model.Vaga;
+import br.com.estacionamento.api.model.Usuario;
 import br.com.estacionamento.api.repository.VagaRepository;
+import br.com.estacionamento.api.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -10,16 +12,31 @@ import java.util.List;
 public class VagaService {
 
     private final VagaRepository repository;
+    private final UsuarioRepository usuarioRepository;
 
-    public VagaService(VagaRepository repository) {
+    public VagaService(VagaRepository repository, UsuarioRepository usuarioRepository) {
         this.repository = repository;
+        this.usuarioRepository = usuarioRepository;
     }
 
     public Vaga cadastrar(Vaga vaga) {
         if (repository.findByCodigo(vaga.getCodigo()).isPresent()) {
             throw new RuntimeException("Já existe uma vaga com esse código");
         }
+        vaga.setAtivo(true);
         return repository.save(vaga);
+    }
+
+    // AGORA É ISOLADO: O Spring descobre o ID do estacionamento sozinho
+    public List<Vaga> listarPorOperador(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
+                
+        if (usuario.getEstacionamento() == null) {
+            throw new RuntimeException("Este operador não possui um estacionamento vinculado.");
+        }
+        
+        return repository.findByEstacionamentoIdAndAtivoTrue(usuario.getEstacionamento().getId());
     }
 
     public Vaga buscarPorId(Long id) {
@@ -45,21 +62,12 @@ public class VagaService {
         return repository.save(vaga);
     }
 
-    // No VagaService.java, ajuste a listagem para usar o método novo:
-    public List<Vaga> listarPorEstacionamento(Long estacionamentoId) {
-        if (estacionamentoId != null) {
-            return repository.findByEstacionamentoIdAndAtivoTrue(estacionamentoId);
-        }
-        return repository.findAll(); // admin pode querer ver tudo
-    }
-
-    // No VagaService.java, modifique a função deletar para o Soft Delete:
     public void deletar(Long id) {
         Vaga vaga = buscarPorId(id);
         if (vaga.isOcupada()) {
             throw new RuntimeException("Não é possível excluir uma vaga que está ocupada no momento.");
         }
-        vaga.setAtivo(false); // Apenas desativa em vez de apagar do banco!
+        vaga.setAtivo(false); 
         repository.save(vaga);
     }
 }

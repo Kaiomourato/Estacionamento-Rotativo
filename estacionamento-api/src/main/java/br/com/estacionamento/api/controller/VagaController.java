@@ -4,7 +4,7 @@ import br.com.estacionamento.api.model.Vaga;
 import br.com.estacionamento.api.service.VagaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -22,10 +22,10 @@ public class VagaController {
         return ResponseEntity.ok(service.cadastrar(vaga));
     }
 
-    // ATUALIZADO: Aceita o ID do estacionamento na URL para filtrar
+    // AGORA É ISOLADO: Lista apenas as vagas do estacionamento do operador logado
     @GetMapping
-    public ResponseEntity<List<Vaga>> listar(@RequestParam(required = false) Long estacionamentoId) {
-        return ResponseEntity.ok(service.listarPorEstacionamento(estacionamentoId));
+    public ResponseEntity<List<Vaga>> listar(Principal principal) {
+        return ResponseEntity.ok(service.listarPorOperador(principal.getName()));
     }
 
     @GetMapping("/{id}")
@@ -43,7 +43,6 @@ public class VagaController {
         return ResponseEntity.ok(service.liberarVaga(id));
     }
 
-    // NOVO: Rota para deletar a vaga
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletar(@PathVariable Long id) {
         service.deletar(id);
