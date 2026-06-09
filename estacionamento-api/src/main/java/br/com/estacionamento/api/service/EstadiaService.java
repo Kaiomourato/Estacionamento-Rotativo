@@ -21,13 +21,16 @@ public class EstadiaService {
     private final UsuarioRepository usuarioRepository;
     private final VeiculoRepository veiculoRepository;
     private final VagaRepository vagaRepository;
+    private final EstacionamentoService estacionamentoService;
 
-    public EstadiaService(EstadiaRepository repository, UsuarioRepository usuarioRepository, 
-                          VeiculoRepository veiculoRepository, VagaRepository vagaRepository) {
+    public EstadiaService(EstadiaRepository repository, UsuarioRepository usuarioRepository,
+                          VeiculoRepository veiculoRepository, VagaRepository vagaRepository,
+                          EstacionamentoService estacionamentoService) {
         this.repository = repository;
         this.usuarioRepository = usuarioRepository;
         this.veiculoRepository = veiculoRepository;
         this.vagaRepository = vagaRepository;
+        this.estacionamentoService = estacionamentoService;
     }
 
     // AGORA É ISOLADO
@@ -58,6 +61,10 @@ public class EstadiaService {
             throw new RuntimeException("Esta vaga já está ocupada");
         }
 
+        if (vaga.getTipoVeiculo() != null && vaga.getTipoVeiculo() != veiculo.getTipo()) {
+            throw new RuntimeException("Esta vaga é exclusiva para veículos do tipo " + vaga.getTipoVeiculo());
+        }
+
         vaga.setOcupada(true);
         vagaRepository.save(vaga);
 
@@ -86,9 +93,9 @@ public class EstadiaService {
         vagaRepository.save(vaga);
 
         long horas = ChronoUnit.HOURS.between(estadia.getEntrada(), estadia.getSaida());
-        if (horas == 0) horas = 1; 
-        
-        Double valorHora = vaga.getEstacionamento().getValorHora();
+        if (horas == 0) horas = 1;
+
+        Double valorHora = estacionamentoService.obterValorHora(vaga.getEstacionamento(), estadia.getVeiculo().getTipo());
         estadia.setValor(horas * valorHora);
 
         return repository.save(estadia);

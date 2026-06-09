@@ -1,5 +1,7 @@
 package br.com.estacionamento.api.controller;
 
+import br.com.estacionamento.api.dto.ResumoVagasDTO;
+import br.com.estacionamento.api.dto.VagaRequestDTO;
 import br.com.estacionamento.api.model.Vaga;
 import br.com.estacionamento.api.service.VagaService;
 import org.springframework.http.ResponseEntity;
@@ -17,15 +19,27 @@ public class VagaController {
         this.service = service;
     }
 
+    // A vaga é sempre criada no estacionamento do operador logado
     @PostMapping
-    public ResponseEntity<Vaga> cadastrar(@RequestBody Vaga vaga) {
-        return ResponseEntity.ok(service.cadastrar(vaga));
+    public ResponseEntity<Vaga> cadastrar(@RequestBody VagaRequestDTO dto, Principal principal) {
+        return ResponseEntity.ok(service.cadastrar(dto, principal.getName()));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Vaga> atualizar(@PathVariable Long id, @RequestBody VagaRequestDTO dto, Principal principal) {
+        return ResponseEntity.ok(service.atualizar(id, dto, principal.getName()));
     }
 
     // AGORA É ISOLADO: Lista apenas as vagas do estacionamento do operador logado
     @GetMapping
     public ResponseEntity<List<Vaga>> listar(Principal principal) {
         return ResponseEntity.ok(service.listarPorOperador(principal.getName()));
+    }
+
+    // Contagem de vagas (total/livres/ocupadas) por tipo de veículo
+    @GetMapping("/resumo")
+    public ResponseEntity<List<ResumoVagasDTO>> resumo(Principal principal) {
+        return ResponseEntity.ok(service.resumoPorOperador(principal.getName()));
     }
 
     @GetMapping("/{id}")

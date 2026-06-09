@@ -1,11 +1,13 @@
 package br.com.estacionamento.api.model;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore; // <-- ADICIONADO
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 
 @Entity
 @Table(name = "estacionamentos")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Estacionamento {
 
     @Id
@@ -24,9 +26,7 @@ public class Estacionamento {
     @Column(nullable = false)
     private Double longitude;
 
-    @Column(nullable = false)
-    private Integer vagasTotais;
-
+    // Valor padrão da hora, usado para tipos de veículo sem preço específico cadastrado
     @Column(nullable = false)
     private Double valorHora;
 
@@ -34,14 +34,17 @@ public class Estacionamento {
     @OneToMany(mappedBy = "estacionamento")
     private List<Vaga> vagas;
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "estacionamento", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PrecoVeiculo> precos;
+
     public Estacionamento() {}
 
-    public Estacionamento(String nome, String endereco, Double latitude, Double longitude, Integer vagasTotais, Double valorHora) {
+    public Estacionamento(String nome, String endereco, Double latitude, Double longitude, Double valorHora) {
         this.nome = nome;
         this.endereco = endereco;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.vagasTotais = vagasTotais;
         this.valorHora = valorHora;
     }
 
@@ -56,11 +59,10 @@ public class Estacionamento {
     public void setLatitude(Double latitude) { this.latitude = latitude; }
     public Double getLongitude() { return longitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
-    public Integer getVagasTotais() { return vagasTotais; }
-    public void setVagasTotais(Integer vagasTotais) { this.vagasTotais = vagasTotais; }
     public Double getValorHora() { return valorHora; }
     public void setValorHora(Double valorHora) { this.valorHora = valorHora; }
     public List<Vaga> getVagas() { return vagas; }
     public void setVagas(List<Vaga> vagas) { this.vagas = vagas; }
+    public List<PrecoVeiculo> getPrecos() { return precos; }
+    public void setPrecos(List<PrecoVeiculo> precos) { this.precos = precos; }
 }
-

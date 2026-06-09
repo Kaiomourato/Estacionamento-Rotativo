@@ -7,8 +7,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface VagaRepository extends JpaRepository<Vaga, Long> {
-    Optional<Vaga> findByCodigo(String codigo);
-    
-    // No VagaRepository.java, mude a linha do findByEstacionamentoId para:
+
     List<Vaga> findByEstacionamentoIdAndAtivoTrue(Long estacionamentoId);
+
+    // Código só precisa ser único dentro do mesmo estacionamento
+    Optional<Vaga> findByEstacionamentoIdAndCodigoAndAtivoTrue(Long estacionamentoId, String codigo);
 }
