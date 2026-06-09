@@ -6,13 +6,19 @@ import java.util.List;
 import java.util.Optional;
 
 public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
-    
-    // Método antigo (Global) - Pode manter por segurança se usar em outro lugar
+
     List<Estadia> findByAtivaTrue();
-    
-    // NOVO: Busca estadias ativas vinculadas apenas ao estacionamento alvo
+
     List<Estadia> findByAtivaTrueAndVagaEstacionamentoId(Long estacionamentoId);
-    
-    // Método usado pelo Motorista para ver o bilhete dele
+
     Optional<Estadia> findByAtivaTrueAndVeiculoUsuarioEmail(String email);
+
+    // Histórico do operador — estadias encerradas do seu estacionamento
+    List<Estadia> findByAtivaFalseAndVagaEstacionamentoIdOrderByEntradaDesc(Long estacionamentoId);
+
+    // Histórico do motorista — estadias encerradas dos seus veículos
+    List<Estadia> findByAtivaFalseAndVeiculoUsuarioEmailOrderByEntradaDesc(String email);
+
+    // Para validar check-in pelo código de reserva
+    Optional<Estadia> findByCodigo(String codigo);
 }

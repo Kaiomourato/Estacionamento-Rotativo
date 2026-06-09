@@ -1,6 +1,7 @@
 package br.com.estacionamento.api.service;
 
 import br.com.estacionamento.api.model.Vaga;
+import br.com.estacionamento.api.model.TipoVeiculo;
 import br.com.estacionamento.api.model.Usuario;
 import br.com.estacionamento.api.repository.VagaRepository;
 import br.com.estacionamento.api.repository.UsuarioRepository;
@@ -20,23 +21,42 @@ public class VagaService {
     }
 
     public Vaga cadastrar(Vaga vaga) {
-        if (repository.findByCodigo(vaga.getCodigo()).isPresent()) {
-            throw new RuntimeException("Já existe uma vaga com esse código");
+        if (vaga.getEstacionamento() == null || vaga.getEstacionamento().getId() == null) {
+            throw new RuntimeException("Vaga precisa estar vinculada a um estacionamento.");
         }
+
+        // Unicidade do código DENTRO do estacionamento — corrige o bug
+        boolean codigoExiste = repository
+            .findByCodigoAndEstacionamentoId(vaga.getCodigo(), vaga.getEstacionamento().getId())
+            .isPresent();
+
+        if (codigoExiste) {
+            throw new RuntimeException("Já existe uma vaga com o código '"
+                + vaga.getCodigo() + "' neste estacionamento.");
+        }
+
+        // Garante que slotsTotal seja definido pelo tipo
+        if (vaga.getTipo() == null) vaga.setTipo(TipoVeiculo.CARRO);
+        vaga.setSlotsTotal(Vaga.slotsDoTipo(vaga.getTipo()));
+        vaga.setSlotsUsados(0);
         vaga.setAtivo(true);
+
         return repository.save(vaga);
     }
 
-    // AGORA É ISOLADO: O Spring descobre o ID do estacionamento sozinho
     public List<Vaga> listarPorOperador(String email) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
-                
+
         if (usuario.getEstacionamento() == null) {
             throw new RuntimeException("Este operador não possui um estacionamento vinculado.");
         }
-        
+
         return repository.findByEstacionamentoIdAndAtivoTrue(usuario.getEstacionamento().getId());
+    }
+
+    public List<Vaga> listarPorEstacionamento(Long estacionamentoId) {
+        return repository.findByEstacionamentoIdAndAtivoTrue(estacionamentoId);
     }
 
     public Vaga buscarPorId(Long id) {
@@ -44,30 +64,12 @@ public class VagaService {
                 .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
     }
 
-    public Vaga ocuparVaga(Long id) {
-        Vaga vaga = buscarPorId(id);
-        if (vaga.isOcupada()) {
-            throw new RuntimeException("Vaga já está ocupada");
-        }
-        vaga.setOcupada(true);
-        return repository.save(vaga);
-    }
-
-    public Vaga liberarVaga(Long id) {
-        Vaga vaga = buscarPorId(id);
-        if (!vaga.isOcupada()) {
-            throw new RuntimeException("Vaga já está livre");
-        }
-        vaga.setOcupada(false);
-        return repository.save(vaga);
-    }
-
     public void deletar(Long id) {
         Vaga vaga = buscarPorId(id);
         if (vaga.isOcupada()) {
-            throw new RuntimeException("Não é possível excluir uma vaga que está ocupada no momento.");
+            throw new RuntimeException("Não é possível excluir uma vaga que está ocupada.");
         }
-        vaga.setAtivo(false); 
+        vaga.setAtivo(false);
         repository.save(vaga);
     }
 }

@@ -1,6 +1,7 @@
 package br.com.estacionamento.api.controller;
 
 import br.com.estacionamento.api.model.Vaga;
+import br.com.estacionamento.api.model.TipoVeiculo;
 import br.com.estacionamento.api.service.VagaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,25 +23,21 @@ public class VagaController {
         return ResponseEntity.ok(service.cadastrar(vaga));
     }
 
-    // AGORA É ISOLADO: Lista apenas as vagas do estacionamento do operador logado
+    // Lista vagas do operador logado (painel operador)
     @GetMapping
     public ResponseEntity<List<Vaga>> listar(Principal principal) {
         return ResponseEntity.ok(service.listarPorOperador(principal.getName()));
     }
 
+    // Lista vagas por estacionamento — usado pelo motorista para reservar (rota pública)
+    @GetMapping("/por-estacionamento/{estacionamentoId}")
+    public ResponseEntity<List<Vaga>> listarPorEstacionamento(@PathVariable Long estacionamentoId) {
+        return ResponseEntity.ok(service.listarPorEstacionamento(estacionamentoId));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Vaga> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(service.buscarPorId(id));
-    }
-
-    @PutMapping("/{id}/ocupar")
-    public ResponseEntity<Vaga> ocupar(@PathVariable Long id) {
-        return ResponseEntity.ok(service.ocuparVaga(id));
-    }
-
-    @PutMapping("/{id}/liberar")
-    public ResponseEntity<Vaga> liberar(@PathVariable Long id) {
-        return ResponseEntity.ok(service.liberarVaga(id));
     }
 
     @DeleteMapping("/{id}")

@@ -12,7 +12,7 @@ import java.util.List;
 public class EstacionamentoService {
 
     private final EstacionamentoRepository repository;
-    private final UsuarioRepository usuarioRepository; // NOVO
+    private final UsuarioRepository usuarioRepository;
 
     public EstacionamentoService(EstacionamentoRepository repository, UsuarioRepository usuarioRepository) {
         this.repository = repository;
@@ -32,25 +32,33 @@ public class EstacionamentoService {
     }
 
     public Estacionamento buscarPorId(Long id) {
-        return repository.findById(id).orElseThrow(() -> new RuntimeException("Estacionamento não encontrado"));
+        return repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Estacionamento não encontrado"));
     }
 
-    // NOVO: Busca apenas o estacionamento vinculado ao operador logado
     public Estacionamento buscarMeuEstacionamento(String email) {
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
-                
-        if (usuario.getEstacionamento() == null) {
-            throw new RuntimeException("Este operador não possui um estacionamento vinculado.");
-        }
+        if (usuario.getEstacionamento() == null)
+            throw new RuntimeException("Este operador não possui estacionamento vinculado.");
         return usuario.getEstacionamento();
     }
 
-    // NOVO: Atualiza nome e valor da hora (usado na nova aba)
     public Estacionamento atualizar(Long id, Estacionamento dados) {
         Estacionamento est = buscarPorId(id);
         est.setNome(dados.getNome());
+        est.setEndereco(dados.getEndereco());
         est.setValorHora(dados.getValorHora());
+
+        // Preços por tipo (podem ser nulos — usa valorHora como fallback)
+        est.setValorHoraCarro(dados.getValorHoraCarro());
+        est.setValorHoraMoto(dados.getValorHoraMoto());
+        est.setValorHoraCaminhonete(dados.getValorHoraCaminhonete());
+
+        // Coordenadas
+        if (dados.getLatitude() != null)  est.setLatitude(dados.getLatitude());
+        if (dados.getLongitude() != null) est.setLongitude(dados.getLongitude());
+
         return repository.save(est);
     }
 }

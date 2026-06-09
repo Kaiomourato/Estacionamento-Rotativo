@@ -1,7 +1,7 @@
 package br.com.estacionamento.api.model;
 
 import jakarta.persistence.*;
-import com.fasterxml.jackson.annotation.JsonIgnore; // <-- ADICIONADO
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 
 @Entity
@@ -18,34 +18,44 @@ public class Estacionamento {
     @Column(nullable = false)
     private String endereco;
 
-    @Column(nullable = false)
+    @Column
     private Double latitude;
 
-    @Column(nullable = false)
+    @Column
     private Double longitude;
 
     @Column(nullable = false)
     private Integer vagasTotais;
 
+    // Preços por tipo de veículo (nullable = usa valorHoraDefault se não definido)
+    @Column
+    private Double valorHoraCarro;
+
+    @Column
+    private Double valorHoraMoto;
+
+    @Column
+    private Double valorHoraCaminhonete;
+
+    // Mantido por retrocompatibilidade — usado como fallback
     @Column(nullable = false)
     private Double valorHora;
 
-    @JsonIgnore // <-- ADICIONADO PARA EVITAR LOOP INFINITO NO JSON
+    @JsonIgnore
     @OneToMany(mappedBy = "estacionamento")
     private List<Vaga> vagas;
 
     public Estacionamento() {}
 
-    public Estacionamento(String nome, String endereco, Double latitude, Double longitude, Integer vagasTotais, Double valorHora) {
-        this.nome = nome;
-        this.endereco = endereco;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.vagasTotais = vagasTotais;
-        this.valorHora = valorHora;
+    /** Retorna o valor/hora para um tipo específico, com fallback para valorHora genérico */
+    public Double getValorHoraPorTipo(TipoVeiculo tipo) {
+        return switch (tipo) {
+            case CARRO       -> valorHoraCarro       != null ? valorHoraCarro       : valorHora;
+            case MOTO        -> valorHoraMoto        != null ? valorHoraMoto        : valorHora;
+            case CAMINHONETE -> valorHoraCaminhonete != null ? valorHoraCaminhonete : valorHora;
+        };
     }
 
-    // Getters e Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNome() { return nome; }
@@ -60,7 +70,12 @@ public class Estacionamento {
     public void setVagasTotais(Integer vagasTotais) { this.vagasTotais = vagasTotais; }
     public Double getValorHora() { return valorHora; }
     public void setValorHora(Double valorHora) { this.valorHora = valorHora; }
+    public Double getValorHoraCarro() { return valorHoraCarro; }
+    public void setValorHoraCarro(Double v) { this.valorHoraCarro = v; }
+    public Double getValorHoraMoto() { return valorHoraMoto; }
+    public void setValorHoraMoto(Double v) { this.valorHoraMoto = v; }
+    public Double getValorHoraCaminhonete() { return valorHoraCaminhonete; }
+    public void setValorHoraCaminhonete(Double v) { this.valorHoraCaminhonete = v; }
     public List<Vaga> getVagas() { return vagas; }
     public void setVagas(List<Vaga> vagas) { this.vagas = vagas; }
 }
-
