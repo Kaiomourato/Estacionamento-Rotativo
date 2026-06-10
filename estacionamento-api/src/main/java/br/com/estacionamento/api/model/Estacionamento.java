@@ -65,4 +65,19 @@ public class Estacionamento {
     public void setVagas(List<Vaga> vagas) { this.vagas = vagas; }
     public List<PrecoVeiculo> getPrecos() { return precos; }
     public void setPrecos(List<PrecoVeiculo> precos) { this.precos = precos; }
+
+    // Contagens de vagas, expostas nas listagens públicas (/estacionamentos, /estacionamentos/proximos)
+    public long getVagasTotais() {
+        if (vagas == null) return 0;
+        return vagas.stream().filter(Vaga::isAtivo).count();
+    }
+
+    public long getVagasOcupadas() {
+        if (vagas == null) return 0;
+        return vagas.stream().filter(v -> v.isAtivo() && v.isOcupada()).count();
+    }
+
+    public long getVagasLivres() {
+        return getVagasTotais() - getVagasOcupadas();
+    }
 }
