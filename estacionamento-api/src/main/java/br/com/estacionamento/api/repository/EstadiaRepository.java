@@ -15,4 +15,10 @@ public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
     
     // Método usado pelo Motorista para ver o bilhete dele
     Optional<Estadia> findByAtivaTrueAndVeiculoUsuarioEmail(String email);
+
+    // Busca a reserva pendente pelo código de check-in
+    Optional<Estadia> findByCodigoAndPendenteTrue(String codigo);
+
+    // Usado para garantir que o código gerado para a reserva seja único
+    boolean existsByCodigoAndPendenteTrue(String codigo);
 }

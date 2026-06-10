@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class EstadiaService {
@@ -77,12 +78,87 @@ public class EstadiaService {
         return repository.save(estadia);
     }
 
+    // Motorista reserva uma vaga específica para um dos seus veículos
+    public Estadia reservarVaga(String email, Long vagaId, Long veiculoId) {
+        Veiculo veiculo = veiculoRepository.findById(veiculoId)
+                .orElseThrow(() -> new RuntimeException("Veículo não encontrado"));
+
+        if (!veiculo.getUsuario().getEmail().equals(email)) {
+            throw new RuntimeException("Este veículo não pertence ao usuário logado");
+        }
+
+        if (repository.findByAtivaTrueAndVeiculoUsuarioEmail(email).isPresent()) {
+            throw new RuntimeException("Você já possui uma estadia ativa ou uma reserva pendente");
+        }
+
+        Vaga vaga = vagaRepository.findById(vagaId)
+                .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
+
+        if (!vaga.isAtivo()) {
+            throw new RuntimeException("Esta vaga não está disponível");
+        }
+
+        if (vaga.isOcupada()) {
+            throw new RuntimeException("Esta vaga já está ocupada ou reservada");
+        }
+
+        if (vaga.getTipoVeiculo() != null && vaga.getTipoVeiculo() != veiculo.getTipo()) {
+            throw new RuntimeException("Esta vaga é exclusiva para veículos do tipo " + vaga.getTipoVeiculo());
+        }
+
+        vaga.setOcupada(true);
+        vagaRepository.save(vaga);
+
+        Estadia estadia = new Estadia();
+        estadia.setVeiculo(veiculo);
+        estadia.setVaga(vaga);
+        estadia.setAtiva(true);
+        estadia.setPendente(true);
+        estadia.setCodigo(gerarCodigo());
+
+        return repository.save(estadia);
+    }
+
+    // Operador confirma o check-in do motorista a partir do código da reserva
+    public Estadia confirmarCheckin(String emailOperador, String codigo) {
+        Usuario operador = usuarioRepository.findByEmail(emailOperador)
+                .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
+
+        if (operador.getEstacionamento() == null) {
+            throw new RuntimeException("Este operador não possui um estacionamento vinculado.");
+        }
+
+        Estadia estadia = repository.findByCodigoAndPendenteTrue(codigo)
+                .orElseThrow(() -> new RuntimeException("Reserva não encontrada ou já utilizada"));
+
+        if (!estadia.getVaga().getEstacionamento().getId().equals(operador.getEstacionamento().getId())) {
+            throw new RuntimeException("Esta reserva não pertence ao seu estacionamento");
+        }
+
+        estadia.setEntrada(LocalDateTime.now());
+        estadia.setPendente(false);
+
+        return repository.save(estadia);
+    }
+
+    private String gerarCodigo() {
+        String codigo;
+        do {
+            codigo = UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        } while (repository.existsByCodigoAndPendenteTrue(codigo));
+        return codigo;
+    }
+
     public Estadia finalizarEstadia(Long id) {
         Estadia estadia = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Estadia não encontrada"));
 
         if (!estadia.isAtiva()) {
             throw new RuntimeException("Esta estadia já está encerrada");
+        }
+
+        if (estadia.isPendente()) {
+            throw new RuntimeException("Esta estadia ainda não teve o check-in confirmado");
         }
 
         estadia.setSaida(LocalDateTime.now());

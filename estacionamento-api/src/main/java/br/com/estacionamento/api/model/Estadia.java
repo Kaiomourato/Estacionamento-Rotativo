@@ -19,7 +19,7 @@ public class Estadia {
     @JoinColumn(name = "vaga_id")
     private Vaga vaga;
 
-    @Column(nullable = false)
+    @Column
     private LocalDateTime entrada;
 
     @Column
@@ -27,6 +27,14 @@ public class Estadia {
 
     @Column(nullable = false)
     private boolean ativa = true;
+
+    // Reserva feita pelo motorista, aguardando check-in do operador
+    @Column(nullable = false)
+    private boolean pendente = false;
+
+    // Código de check-in gerado quando a vaga é reservada
+    @Column(length = 6)
+    private String codigo;
 
     @Column
     private Double valor;
@@ -85,5 +93,21 @@ public class Estadia {
 
     public void setValor(Double valor) {
         this.valor = valor;
+    }
+
+    public boolean isPendente() {
+        return pendente;
+    }
+
+    public void setPendente(boolean pendente) {
+        this.pendente = pendente;
+    }
+
+    public String getCodigo() {
+        return codigo;
+    }
+
+    public void setCodigo(String codigo) {
+        this.codigo = codigo;
     }
 }

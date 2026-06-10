@@ -38,4 +38,16 @@ public class EstadiaController {
     public ResponseEntity<Estadia> finalizarEstadia(@PathVariable Long id) {
         return ResponseEntity.ok(service.finalizarEstadia(id));
     }
+
+    // Rota do Motorista: agenda uma vaga específica para um dos seus veículos
+    @PostMapping("/reservar")
+    public ResponseEntity<Estadia> reservar(@RequestParam Long vagaId, @RequestParam Long veiculoId, Principal principal) {
+        return ResponseEntity.ok(service.reservarVaga(principal.getName(), vagaId, veiculoId));
+    }
+
+    // Rota do Operador: confirma o check-in do motorista a partir do código da reserva
+    @PutMapping("/checkin")
+    public ResponseEntity<Estadia> confirmarCheckin(@RequestParam String codigo, Principal principal) {
+        return ResponseEntity.ok(service.confirmarCheckin(principal.getName(), codigo));
+    }
 }
