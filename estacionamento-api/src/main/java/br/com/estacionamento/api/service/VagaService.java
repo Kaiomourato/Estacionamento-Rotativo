@@ -2,6 +2,7 @@ package br.com.estacionamento.api.service;
 
 import br.com.estacionamento.api.dto.ResumoVagasDTO;
 import br.com.estacionamento.api.dto.VagaRequestDTO;
+import br.com.estacionamento.api.exception.RecursoNaoEncontradoException;
 import br.com.estacionamento.api.model.Estacionamento;
 import br.com.estacionamento.api.model.TipoVeiculo;
 import br.com.estacionamento.api.model.Vaga;
@@ -150,8 +151,14 @@ public class VagaService {
         return repository.save(vaga);
     }
 
-    public void deletar(Long id) {
+    public void deletar(Long id, String email) {
+        Estacionamento estacionamento = buscarEstacionamentoDoOperador(email);
         Vaga vaga = buscarPorId(id);
+
+        if (!vaga.getEstacionamento().getId().equals(estacionamento.getId())) {
+            throw new RecursoNaoEncontradoException("Vaga não encontrada");
+        }
+
         if (vaga.isOcupada()) {
             throw new RuntimeException("Não é possível excluir uma vaga que está ocupada no momento.");
         }

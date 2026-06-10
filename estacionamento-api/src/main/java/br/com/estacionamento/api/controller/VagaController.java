@@ -64,8 +64,8 @@ public class VagaController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletar(@PathVariable Long id) {
-        service.deletar(id);
+    public ResponseEntity<Void> deletar(@PathVariable Long id, Principal principal) {
+        service.deletar(id, principal.getName());
         return ResponseEntity.noContent().build();
     }
 }

@@ -41,13 +41,20 @@ public class EstadiaController {
 
     // Rota do Motorista: agenda uma vaga específica para um dos seus veículos
     @PostMapping("/reservar")
-    public ResponseEntity<Estadia> reservar(@RequestParam Long vagaId, @RequestParam Long veiculoId, Principal principal) {
-        return ResponseEntity.ok(service.reservarVaga(principal.getName(), vagaId, veiculoId));
+    public ResponseEntity<Estadia> reservar(@RequestParam Long vagaId, @RequestParam Long veiculoId,
+            @RequestParam(required = false) String previsaoChegada, Principal principal) {
+        return ResponseEntity.ok(service.reservarVaga(principal.getName(), vagaId, veiculoId, previsaoChegada));
     }
 
     // Rota do Operador: confirma o check-in do motorista a partir do código da reserva
     @PutMapping("/checkin")
     public ResponseEntity<Estadia> confirmarCheckin(@RequestParam String codigo, Principal principal) {
         return ResponseEntity.ok(service.confirmarCheckin(principal.getName(), codigo));
+    }
+
+    // Rota do Operador: cancela uma reserva pendente (sem check-in), liberando a vaga
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<Estadia> cancelar(@PathVariable Long id, Principal principal) {
+        return ResponseEntity.ok(service.cancelarReserva(principal.getName(), id));
     }
 }

@@ -1,9 +1,11 @@
 package br.com.estacionamento.api.controller;
 
 import br.com.estacionamento.api.dto.PrecoVeiculoDTO;
+import br.com.estacionamento.api.dto.RelatorioOperadorDTO;
 import br.com.estacionamento.api.model.Estacionamento;
 import br.com.estacionamento.api.model.PrecoVeiculo;
 import br.com.estacionamento.api.service.EstacionamentoService;
+import br.com.estacionamento.api.service.EstadiaService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
@@ -15,9 +17,11 @@ import java.util.List;
 public class EstacionamentoController {
 
     private final EstacionamentoService service;
+    private final EstadiaService estadiaService;
 
-    public EstacionamentoController(EstacionamentoService service) {
+    public EstacionamentoController(EstacionamentoService service, EstadiaService estadiaService) {
         this.service = service;
+        this.estadiaService = estadiaService;
     }
 
     @GetMapping
@@ -61,5 +65,11 @@ public class EstacionamentoController {
     @PutMapping("/meu/precos")
     public ResponseEntity<List<PrecoVeiculo>> atualizarPrecos(@RequestBody List<PrecoVeiculoDTO> precos, Principal principal) {
         return ResponseEntity.ok(service.atualizarPrecos(principal.getName(), precos));
+    }
+
+    // Dashboard do operador: faturamento (aberto/semana/mês/ano), fluxo semanal e faturamento mensal
+    @GetMapping("/meu/relatorio")
+    public ResponseEntity<RelatorioOperadorDTO> relatorio(Principal principal) {
+        return ResponseEntity.ok(estadiaService.gerarRelatorio(principal.getName()));
     }
 }

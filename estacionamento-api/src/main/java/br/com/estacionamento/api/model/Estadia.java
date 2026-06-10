@@ -1,6 +1,8 @@
 package br.com.estacionamento.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import org.hibernate.annotations.ColumnDefault;
 import java.time.LocalDateTime;
 
 @Entity
@@ -39,7 +41,25 @@ public class Estadia {
     @Column
     private Double valor;
 
-    
+    // Momento em que o registro foi criado (preenchido automaticamente pelo backend)
+    @Column
+    private LocalDateTime criadoEm;
+
+    // Horário em que o motorista espera chegar para fazer o check-in (opcional)
+    @Column
+    private LocalDateTime previsaoChegada;
+
+    // Reserva cancelada pelo operador antes do check-in
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean cancelada = false;
+
+    // Controla se o motorista já foi avisado do cancelamento via /minha-ativa
+    @Column(nullable = false)
+    @ColumnDefault("false")
+    private boolean notificacaoCancelamentoLida = false;
+
+
     public Estadia() {}
 
    
@@ -109,5 +129,46 @@ public class Estadia {
 
     public void setCodigo(String codigo) {
         this.codigo = codigo;
+    }
+
+    public LocalDateTime getCriadoEm() {
+        return criadoEm;
+    }
+
+    public void setCriadoEm(LocalDateTime criadoEm) {
+        this.criadoEm = criadoEm;
+    }
+
+    public LocalDateTime getPrevisaoChegada() {
+        return previsaoChegada;
+    }
+
+    public void setPrevisaoChegada(LocalDateTime previsaoChegada) {
+        this.previsaoChegada = previsaoChegada;
+    }
+
+    public boolean isCancelada() {
+        return cancelada;
+    }
+
+    public void setCancelada(boolean cancelada) {
+        this.cancelada = cancelada;
+    }
+
+    @JsonIgnore
+    public boolean isNotificacaoCancelamentoLida() {
+        return notificacaoCancelamentoLida;
+    }
+
+    public void setNotificacaoCancelamentoLida(boolean notificacaoCancelamentoLida) {
+        this.notificacaoCancelamentoLida = notificacaoCancelamentoLida;
+    }
+
+    // Status derivado, exposto no JSON para o frontend (PENDENTE | ATIVA | FINALIZADA | CANCELADA)
+    public StatusEstadia getStatus() {
+        if (cancelada) return StatusEstadia.CANCELADA;
+        if (pendente) return StatusEstadia.PENDENTE;
+        if (!ativa) return StatusEstadia.FINALIZADA;
+        return StatusEstadia.ATIVA;
     }
 }
