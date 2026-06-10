@@ -122,6 +122,11 @@ public class VagaService {
         return resumo;
     }
 
+    // Lista vagas ativas de um estacionamento — usado pelo motorista para reservar
+    public List<Vaga> listarPorEstacionamento(Long estacionamentoId) {
+        return repository.findByEstacionamentoIdAndAtivoTrue(estacionamentoId);
+    }
+
     public Vaga buscarPorId(Long id) {
         return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));

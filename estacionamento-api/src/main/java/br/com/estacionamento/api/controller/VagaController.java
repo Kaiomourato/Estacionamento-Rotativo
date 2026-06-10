@@ -42,6 +42,12 @@ public class VagaController {
         return ResponseEntity.ok(service.resumoPorOperador(principal.getName()));
     }
 
+    // Lista vagas de um estacionamento específico — usado pelo motorista para reservar
+    @GetMapping("/por-estacionamento/{estacionamentoId}")
+    public ResponseEntity<List<Vaga>> listarPorEstacionamento(@PathVariable Long estacionamentoId) {
+        return ResponseEntity.ok(service.listarPorEstacionamento(estacionamentoId));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<Vaga> buscarPorId(@PathVariable Long id) {
         return ResponseEntity.ok(service.buscarPorId(id));
