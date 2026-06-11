@@ -2,6 +2,7 @@ package br.com.estacionamento.api.service;
 
 import br.com.estacionamento.api.dto.LoginRequestDTO;
 import br.com.estacionamento.api.dto.RegisterRequestDTO;
+import br.com.estacionamento.api.exception.CredenciaisInvalidasException;
 import br.com.estacionamento.api.model.Estacionamento;
 import br.com.estacionamento.api.model.Usuario;
 import br.com.estacionamento.api.repository.EstacionamentoRepository;
@@ -9,8 +10,12 @@ import br.com.estacionamento.api.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.Set;
+
 @Service
 public class AuthService {
+
+    private static final Set<String> ROLES_VALIDAS = Set.of("USER", "OPERADOR", "ADMIN");
 
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
@@ -32,10 +37,14 @@ public class AuthService {
         usuario.setSenha(passwordEncoder.encode(dto.getSenha()));
 
         // Se a role não for enviada, assume o padrão "USER" (Motorista)
-        if (dto.getRole() == null || dto.getRole().isEmpty()) {
+        if (dto.getRole() == null || dto.getRole().isBlank()) {
             usuario.setRole("USER");
         } else {
-            usuario.setRole(dto.getRole().toUpperCase());
+            String roleInformada = dto.getRole().toUpperCase();
+            if (!ROLES_VALIDAS.contains(roleInformada)) {
+                throw new RuntimeException("Role inválida. Valores aceitos: " + ROLES_VALIDAS);
+            }
+            usuario.setRole(roleInformada);
         }
 
         // Se for um OPERADOR, obrigatoriamente vincula a um Estacionamento
@@ -53,16 +62,12 @@ public class AuthService {
     }
 
     public Usuario login(LoginRequestDTO dto) {
-        Usuario usuario = buscarPorEmail(dto.getEmail());
+        Usuario usuario = usuarioRepository.findByEmail(dto.getEmail())
+                .orElseThrow(() -> new CredenciaisInvalidasException("Email ou senha inválidos"));
 
         if (!passwordEncoder.matches(dto.getSenha(), usuario.getSenha())) {
-            throw new RuntimeException("Senha inválida");
+            throw new CredenciaisInvalidasException("Email ou senha inválidos");
         }
         return usuario;
-    }
-
-    public Usuario buscarPorEmail(String email) {
-        return usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
     }
 }

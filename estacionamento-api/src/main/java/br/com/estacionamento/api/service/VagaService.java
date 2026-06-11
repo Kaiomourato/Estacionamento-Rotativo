@@ -137,7 +137,7 @@ public class VagaService {
 
     public Vaga buscarPorId(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Vaga não encontrada"));
     }
 
     public Vaga ocuparVaga(Long id) {

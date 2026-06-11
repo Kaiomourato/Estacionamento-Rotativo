@@ -1,6 +1,9 @@
 package br.com.estacionamento.api.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 @Entity
 @Table(name = "veiculos")
@@ -10,6 +13,8 @@ public class Veiculo {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "A placa é obrigatória.")
+    @Size(max = 10, message = "A placa deve ter no máximo 10 caracteres.")
     @Column(nullable = false, unique = true, length = 10)
     private String placa;
 
@@ -26,9 +31,10 @@ public class Veiculo {
     @Column(nullable = false)
     private boolean ativo = true;
 
-    // NOVO: Relacionamento com Usuário
+    // NOVO: Relacionamento com Usuário (oculto no JSON: nunca deve expor dados de outro usuário)
     @ManyToOne
     @JoinColumn(name = "usuario_id")
+    @JsonIgnore
     private Usuario usuario;
 
     public Veiculo() {}

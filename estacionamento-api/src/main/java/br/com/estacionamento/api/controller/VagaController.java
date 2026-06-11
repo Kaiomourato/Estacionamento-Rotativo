@@ -4,6 +4,7 @@ import br.com.estacionamento.api.dto.ResumoVagasDTO;
 import br.com.estacionamento.api.dto.VagaRequestDTO;
 import br.com.estacionamento.api.model.Vaga;
 import br.com.estacionamento.api.service.VagaService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
@@ -22,7 +23,7 @@ public class VagaController {
     // A vaga é sempre criada no estacionamento do operador logado
     @PostMapping
     public ResponseEntity<Vaga> cadastrar(@RequestBody VagaRequestDTO dto, Principal principal) {
-        return ResponseEntity.ok(service.cadastrar(dto, principal.getName()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.cadastrar(dto, principal.getName()));
     }
 
     @PutMapping("/{id}")

@@ -2,6 +2,7 @@ package br.com.estacionamento.api.controller;
 
 import br.com.estacionamento.api.model.Estadia;
 import br.com.estacionamento.api.service.EstadiaService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
@@ -43,7 +44,7 @@ public class EstadiaController {
 
     @PostMapping
     public ResponseEntity<Estadia> registrarEntrada(@RequestParam String placa, @RequestParam Long vagaId) {
-        return ResponseEntity.ok(service.registrarEntrada(placa, vagaId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.registrarEntrada(placa, vagaId));
     }
 
     @PutMapping("/{id}/finalizar")
@@ -55,7 +56,8 @@ public class EstadiaController {
     @PostMapping("/reservar")
     public ResponseEntity<Estadia> reservar(@RequestParam Long vagaId, @RequestParam Long veiculoId,
             @RequestParam(required = false) String previsaoChegada, Principal principal) {
-        return ResponseEntity.ok(service.reservarVaga(principal.getName(), vagaId, veiculoId, previsaoChegada));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(service.reservarVaga(principal.getName(), vagaId, veiculoId, previsaoChegada));
     }
 
     // Rota do Operador: confirma o check-in do motorista a partir do código da reserva

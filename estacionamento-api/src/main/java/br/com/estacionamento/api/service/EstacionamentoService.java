@@ -1,6 +1,7 @@
 package br.com.estacionamento.api.service;
 
 import br.com.estacionamento.api.dto.PrecoVeiculoDTO;
+import br.com.estacionamento.api.exception.RecursoNaoEncontradoException;
 import br.com.estacionamento.api.model.Estacionamento;
 import br.com.estacionamento.api.model.PrecoVeiculo;
 import br.com.estacionamento.api.model.TipoVeiculo;
@@ -39,7 +40,7 @@ public class EstacionamentoService {
     }
 
     public Estacionamento buscarPorId(Long id) {
-        return repository.findById(id).orElseThrow(() -> new RuntimeException("Estacionamento não encontrado"));
+        return repository.findById(id).orElseThrow(() -> new RecursoNaoEncontradoException("Estacionamento não encontrado"));
     }
 
     // NOVO: Busca apenas o estacionamento vinculado ao operador logado

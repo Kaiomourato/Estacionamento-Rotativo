@@ -7,6 +7,7 @@ import br.com.estacionamento.api.dto.RelatorioOperadorDTO;
 import br.com.estacionamento.api.exception.RecursoNaoEncontradoException;
 import br.com.estacionamento.api.model.Estacionamento;
 import br.com.estacionamento.api.model.Estadia;
+import br.com.estacionamento.api.model.TipoVeiculo;
 import br.com.estacionamento.api.model.Usuario;
 import br.com.estacionamento.api.model.Vaga;
 import br.com.estacionamento.api.model.Veiculo;
@@ -15,6 +16,7 @@ import br.com.estacionamento.api.repository.UsuarioRepository;
 import br.com.estacionamento.api.repository.VagaRepository;
 import br.com.estacionamento.api.repository.VeiculoRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -102,12 +104,21 @@ public class EstadiaService {
         return estadia;
     }
 
+    // Registrar entrada manual (operador): o veículo não precisa estar previamente
+    // cadastrado por um motorista — se a placa não existir, cria um veículo "avulso".
+    @Transactional
     public Estadia registrarEntrada(String placa, Long vagaId) {
-        Veiculo veiculo = veiculoRepository.findByPlaca(placa)
-                .orElseThrow(() -> new RuntimeException("Veículo não encontrado"));
-                
+        if (placa == null || placa.isBlank()) {
+            throw new RuntimeException("A placa é obrigatória");
+        }
+
+        String placaNormalizada = placa.trim().toUpperCase();
+        if (placaNormalizada.length() > 10) {
+            throw new RuntimeException("A placa deve ter no máximo 10 caracteres.");
+        }
+
         Vaga vaga = vagaRepository.findById(vagaId)
-                .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Vaga não encontrada"));
 
         if (!vaga.isAtivo()) {
             throw new RuntimeException("Esta vaga não está disponível");
@@ -116,6 +127,15 @@ public class EstadiaService {
         if (vaga.isOcupada()) {
             throw new RuntimeException("Esta vaga já está ocupada");
         }
+
+        Veiculo veiculo = veiculoRepository.findByPlaca(placaNormalizada)
+                .orElseGet(() -> {
+                    Veiculo novo = new Veiculo();
+                    novo.setPlaca(placaNormalizada);
+                    novo.setTipo(vaga.getTipoVeiculo() != null ? vaga.getTipoVeiculo() : TipoVeiculo.CARRO);
+                    novo.setAtivo(true);
+                    return veiculoRepository.save(novo);
+                });
 
         if (vaga.getTipoVeiculo() != null && vaga.getTipoVeiculo() != veiculo.getTipo()) {
             throw new RuntimeException("Esta vaga é exclusiva para veículos do tipo " + vaga.getTipoVeiculo());
@@ -135,9 +155,10 @@ public class EstadiaService {
     }
 
     // Motorista reserva uma vaga específica para um dos seus veículos
+    @Transactional
     public Estadia reservarVaga(String email, Long vagaId, Long veiculoId, String previsaoChegadaIso) {
         Veiculo veiculo = veiculoRepository.findById(veiculoId)
-                .orElseThrow(() -> new RuntimeException("Veículo não encontrado"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Veículo não encontrado"));
 
         if (!veiculo.getUsuario().getEmail().equals(email)) {
             throw new RuntimeException("Este veículo não pertence ao usuário logado");
@@ -148,7 +169,7 @@ public class EstadiaService {
         }
 
         Vaga vaga = vagaRepository.findById(vagaId)
-                .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Vaga não encontrada"));
 
         if (!vaga.isAtivo()) {
             throw new RuntimeException("Esta vaga não está disponível");
@@ -212,6 +233,7 @@ public class EstadiaService {
     }
 
     // Operador cancela uma reserva pendente (ainda sem check-in), liberando a vaga
+    @Transactional
     public Estadia cancelarReserva(String emailOperador, Long estadiaId) {
         Usuario operador = usuarioRepository.findByEmail(emailOperador)
                 .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
@@ -251,9 +273,10 @@ public class EstadiaService {
         return codigo;
     }
 
+    @Transactional
     public Estadia finalizarEstadia(Long id) {
         Estadia estadia = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Estadia não encontrada"));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Estadia não encontrada"));
 
         if (!estadia.isAtiva()) {
             throw new RuntimeException("Esta estadia já está encerrada");

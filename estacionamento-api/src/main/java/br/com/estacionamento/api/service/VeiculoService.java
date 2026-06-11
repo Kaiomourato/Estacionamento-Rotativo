@@ -1,5 +1,6 @@
 package br.com.estacionamento.api.service;
 
+import br.com.estacionamento.api.exception.RecursoNaoEncontradoException;
 import br.com.estacionamento.api.model.Usuario;
 import br.com.estacionamento.api.model.Veiculo;
 import br.com.estacionamento.api.repository.UsuarioRepository;
@@ -52,7 +53,7 @@ public class VeiculoService {
 
     public Veiculo buscarPorId(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Veículo não encontrado com o ID: " + id));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Veículo não encontrado com o ID: " + id));
     }
 
     @Transactional
