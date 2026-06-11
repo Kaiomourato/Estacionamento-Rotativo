@@ -26,6 +26,9 @@ public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
             + "ORDER BY e.id DESC")
     List<Estadia> findAtivaOuCanceladaNaoLidaByVeiculoUsuarioEmail(@Param("email") String email);
 
+    // Histórico do motorista: estadias já encerradas (finalizadas ou canceladas), mais recentes primeiro
+    List<Estadia> findByVeiculoUsuarioEmailAndAtivaFalseOrderByIdDesc(String email);
+
     // Busca a reserva pendente pelo código de check-in
     Optional<Estadia> findByCodigoAndPendenteTrue(String codigo);
 

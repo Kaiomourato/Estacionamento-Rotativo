@@ -67,6 +67,11 @@ public class EstadiaService {
         return repository.findByAtivaTrueAndVagaEstacionamentoId(usuario.getEstacionamento().getId());
     }
 
+    // Histórico do motorista: estadias já encerradas (finalizadas ou canceladas)
+    public List<Estadia> buscarHistoricoDoMotorista(String email) {
+        return repository.findByVeiculoUsuarioEmailAndAtivaFalseOrderByIdDesc(email);
+    }
+
     public Estadia buscarEstadiaAtivaDoMotorista(String email) {
         List<Estadia> resultados = repository.findAtivaOuCanceladaNaoLidaByVeiculoUsuarioEmail(email);
 

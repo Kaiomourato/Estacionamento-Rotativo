@@ -23,6 +23,12 @@ public class EstadiaController {
         return ResponseEntity.ok(service.buscarEstadiaAtivaDoMotorista(principal.getName()));
     }
 
+    // Rota do Motorista: histórico de estadias finalizadas/canceladas
+    @GetMapping("/meu-historico")
+    public ResponseEntity<List<Estadia>> buscarMeuHistorico(Principal principal) {
+        return ResponseEntity.ok(service.buscarHistoricoDoMotorista(principal.getName()));
+    }
+
     // AGORA É ISOLADO: Rota do Operador lista só os carros do pátio dele
     @GetMapping("/ativas")
     public ResponseEntity<List<Estadia>> listarAtivas(Principal principal) {

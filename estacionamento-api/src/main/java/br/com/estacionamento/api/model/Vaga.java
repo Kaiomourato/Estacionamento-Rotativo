@@ -31,7 +31,7 @@ public class Vaga {
 
     @ManyToOne
     @JoinColumn(name = "estacionamento_id")
-    @JsonIgnoreProperties({"vagas", "precos"})
+    @JsonIgnoreProperties({"vagas", "precos", "vagasTotais", "vagasOcupadas", "vagasLivres"})
     private Estacionamento estacionamento;
 
     public Vaga() {

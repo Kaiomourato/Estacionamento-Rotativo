@@ -15,7 +15,7 @@ public class PrecoVeiculo {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "estacionamento_id")
-    @JsonIgnoreProperties({"vagas", "precos"})
+    @JsonIgnoreProperties({"vagas", "precos", "vagasTotais", "vagasOcupadas", "vagasLivres"})
     private Estacionamento estacionamento;
 
     @Enumerated(EnumType.STRING)
