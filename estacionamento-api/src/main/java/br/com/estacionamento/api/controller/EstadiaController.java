@@ -35,6 +35,12 @@ public class EstadiaController {
         return ResponseEntity.ok(service.listarAtivasPorOperador(principal.getName()));
     }
 
+    // Rota do Operador: histórico de estadias encerradas do seu estacionamento
+    @GetMapping("/historico")
+    public ResponseEntity<List<Estadia>> listarHistorico(Principal principal) {
+        return ResponseEntity.ok(service.listarHistoricoPorOperador(principal.getName()));
+    }
+
     @PostMapping
     public ResponseEntity<Estadia> registrarEntrada(@RequestParam String placa, @RequestParam Long vagaId) {
         return ResponseEntity.ok(service.registrarEntrada(placa, vagaId));

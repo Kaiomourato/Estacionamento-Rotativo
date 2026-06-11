@@ -43,4 +43,7 @@ public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
 
     // Estadias com entrada registrada a partir de uma data
     List<Estadia> findByVagaEstacionamentoIdAndEntradaIsNotNullAndEntradaGreaterThanEqual(Long estacionamentoId, LocalDateTime desde);
+
+    // Histórico do operador: estadias encerradas (finalizadas ou canceladas) do seu estacionamento, mais recentes primeiro
+    List<Estadia> findByVagaEstacionamentoIdAndAtivaFalseOrderByIdDesc(Long estacionamentoId);
 }

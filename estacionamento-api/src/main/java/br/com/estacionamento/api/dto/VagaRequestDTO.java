@@ -9,9 +9,15 @@ public class VagaRequestDTO {
     // Tipo de veículo aceito pela vaga. Nulo = aceita qualquer tipo de veículo.
     private TipoVeiculo tipoVeiculo;
 
+    // Ativa/desativa (soft delete) a vaga. Nulo = não altera o estado atual.
+    private Boolean ativo;
+
     public String getCodigo() { return codigo; }
     public void setCodigo(String codigo) { this.codigo = codigo; }
 
     public TipoVeiculo getTipoVeiculo() { return tipoVeiculo; }
     public void setTipoVeiculo(TipoVeiculo tipoVeiculo) { this.tipoVeiculo = tipoVeiculo; }
+
+    public Boolean getAtivo() { return ativo; }
+    public void setAtivo(Boolean ativo) { this.ativo = ativo; }
 }

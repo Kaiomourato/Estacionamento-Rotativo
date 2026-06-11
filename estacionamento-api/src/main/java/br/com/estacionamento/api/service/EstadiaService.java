@@ -72,6 +72,18 @@ public class EstadiaService {
         return repository.findByVeiculoUsuarioEmailAndAtivaFalseOrderByIdDesc(email);
     }
 
+    // Histórico do operador: estadias encerradas (finalizadas ou canceladas) do seu estacionamento
+    public List<Estadia> listarHistoricoPorOperador(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Operador não encontrado"));
+
+        if (usuario.getEstacionamento() == null) {
+            throw new RuntimeException("Este operador não possui um estacionamento vinculado.");
+        }
+
+        return repository.findByVagaEstacionamentoIdAndAtivaFalseOrderByIdDesc(usuario.getEstacionamento().getId());
+    }
+
     public Estadia buscarEstadiaAtivaDoMotorista(String email) {
         List<Estadia> resultados = repository.findAtivaOuCanceladaNaoLidaByVeiculoUsuarioEmail(email);
 
@@ -96,6 +108,10 @@ public class EstadiaService {
                 
         Vaga vaga = vagaRepository.findById(vagaId)
                 .orElseThrow(() -> new RuntimeException("Vaga não encontrada"));
+
+        if (!vaga.isAtivo()) {
+            throw new RuntimeException("Esta vaga não está disponível");
+        }
 
         if (vaga.isOcupada()) {
             throw new RuntimeException("Esta vaga já está ocupada");

@@ -149,6 +149,24 @@ class EstadiaQueriesTest {
         assertThat(historico.get(0).getStatus()).isEqualTo(StatusEstadia.FINALIZADA);
     }
 
+    // GET /estadias/historico (operador): faltava endpoint/consulta para o
+    // histórico de estadias encerradas do estacionamento do operador.
+    @Test
+    void historicoDoOperadorListaEstadiasEncerradas() {
+        Estadia estadia = novaEstadia();
+        estadia.setEntrada(LocalDateTime.now().minusHours(2));
+        estadia.setSaida(LocalDateTime.now());
+        estadia.setAtiva(false);
+        estadia.setPendente(false);
+        estadia.setValor(10.0);
+        estadiaRepository.save(estadia);
+
+        List<Estadia> historico = estadiaService.listarHistoricoPorOperador("operador@teste.com");
+
+        assertThat(historico).hasSize(1);
+        assertThat(historico.get(0).getStatus()).isEqualTo(StatusEstadia.FINALIZADA);
+    }
+
     // Bug #7: GET /estacionamentos/meu/relatorio
     @Test
     void relatorioOperadorNaoFalha() {

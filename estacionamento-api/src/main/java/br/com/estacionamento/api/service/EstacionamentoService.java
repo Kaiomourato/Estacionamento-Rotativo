@@ -47,11 +47,18 @@ public class EstacionamentoService {
         return buscarEstacionamentoDoOperador(email);
     }
 
-    // NOVO: Atualiza nome e valor da hora (usado na nova aba)
+    // NOVO: Atualiza os dados editáveis nas Configurações (nome, endereço e valor da hora)
     public Estacionamento atualizar(Long id, Estacionamento dados) {
         Estacionamento est = buscarPorId(id);
         est.setNome(dados.getNome());
         est.setValorHora(dados.getValorHora());
+        est.setEndereco(dados.getEndereco());
+        if (dados.getLatitude() != null) {
+            est.setLatitude(dados.getLatitude());
+        }
+        if (dados.getLongitude() != null) {
+            est.setLongitude(dados.getLongitude());
+        }
         return repository.save(est);
     }
 

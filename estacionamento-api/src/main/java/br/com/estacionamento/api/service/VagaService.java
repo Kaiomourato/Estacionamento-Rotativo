@@ -78,6 +78,13 @@ public class VagaService {
 
         vaga.setTipoVeiculo(dto.getTipoVeiculo());
 
+        if (dto.getAtivo() != null && dto.getAtivo() != vaga.isAtivo()) {
+            if (!dto.getAtivo() && vaga.isOcupada()) {
+                throw new RuntimeException("Não é possível desativar uma vaga que está ocupada no momento.");
+            }
+            vaga.setAtivo(dto.getAtivo());
+        }
+
         return repository.save(vaga);
     }
 
