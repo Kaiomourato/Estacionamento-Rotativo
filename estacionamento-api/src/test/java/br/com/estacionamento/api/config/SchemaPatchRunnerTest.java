@@ -69,4 +69,21 @@ class SchemaPatchRunnerTest {
         assertThatCode(() -> estadiaRepository.findByAtivaTrueAndVagaEstacionamentoId(1L))
                 .doesNotThrowAnyException();
     }
+
+    // Garante que a verificação pós-patch não derruba a aplicação mesmo se o
+    // information_schema não tiver as colunas esperadas (ex.: ALTER falhou por
+    // permissão no banco real) — o problema deve virar um log de erro, nunca
+    // uma exceção que impeça a subida do app.
+    // @DirtiesContext próprio: este teste remove as colunas e não as recria,
+    // então o contexto (e o H2 em memória) precisa ser recriado depois dele
+    // para não afetar os outros testes da classe.
+    @Test
+    @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
+    void verificacaoPosPatchNaoLancaExcecaoMesmoSemAsColunas() {
+        jdbcTemplate.execute("ALTER TABLE estadias DROP COLUMN cancelada");
+        jdbcTemplate.execute("ALTER TABLE estadias DROP COLUMN notificacao_cancelamento_lida");
+
+        assertThatCode(() -> schemaPatchRunner.verificarColunasEstadia())
+                .doesNotThrowAnyException();
+    }
 }
