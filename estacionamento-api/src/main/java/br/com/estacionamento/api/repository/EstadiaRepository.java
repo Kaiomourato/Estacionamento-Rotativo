@@ -46,4 +46,13 @@ public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
 
     // Histórico do operador: estadias encerradas (finalizadas ou canceladas) do seu estacionamento, mais recentes primeiro
     List<Estadia> findByVagaEstacionamentoIdAndAtivaFalseOrderByIdDesc(Long estacionamentoId);
+
+    // NOVO (painel ADM): todas as estadias criadas a partir de uma data, em QUALQUER estacionamento
+    List<Estadia> findByCriadoEmGreaterThanEqual(LocalDateTime desde);
+
+    // NOVO (painel ADM): estadias finalizadas a partir de uma data, em QUALQUER estacionamento
+    List<Estadia> findBySaidaIsNotNullAndSaidaGreaterThanEqual(LocalDateTime desde);
+
+    // NOVO (painel ADM): estadias em andamento agora, em QUALQUER estacionamento
+    List<Estadia> findByAtivaTrueAndPendenteFalse();
 }

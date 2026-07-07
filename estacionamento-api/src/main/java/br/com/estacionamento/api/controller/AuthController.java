@@ -12,7 +12,6 @@ import br.com.estacionamento.api.dto.LoginRequestDTO;
 import br.com.estacionamento.api.dto.LoginResponseDTO;
 import br.com.estacionamento.api.dto.RegisterRequestDTO;
 import br.com.estacionamento.api.infra.security.TokenService;
-import br.com.estacionamento.api.model.Usuario;
 import br.com.estacionamento.api.service.AuthService;
 import jakarta.validation.Valid;
 

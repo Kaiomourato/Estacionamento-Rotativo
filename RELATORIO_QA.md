@@ -1,4 +1,4 @@
-# Relatório de QA – Estacionamento Rotativo
+# Relatório de QA – Estacionamento Rotativo com foco os sistemas principais,
 
 **Data dos testes:** 11/06/2026
 **Ambiente testado:** API de produção (Render) – `https://estacionamento-rotativo-l65y.onrender.com` + análise estática do front-end React (`painel-estacionamento`)

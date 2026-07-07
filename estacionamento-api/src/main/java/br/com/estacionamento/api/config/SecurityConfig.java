@@ -20,6 +20,8 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
+import br.com.estacionamento.api.infra.log.LogAcessoFilter;
+
 
 @Configuration
 @EnableWebSecurity
@@ -28,6 +30,9 @@ public class SecurityConfig {
 
     @Autowired
     SecurityFilter securityFilter;
+
+    @Autowired
+    LogAcessoFilter logAcessoFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -42,7 +47,8 @@ public class SecurityConfig {
                 .requestMatchers("/error").permitAll()
                 .anyRequest().authenticated() 
             )
-            .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(securityFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterAfter(logAcessoFilter, SecurityFilter.class);
 
         return http.build();
     }
