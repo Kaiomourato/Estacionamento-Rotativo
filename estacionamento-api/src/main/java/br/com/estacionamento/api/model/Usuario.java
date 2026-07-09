@@ -6,6 +6,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -34,6 +35,11 @@ public class Usuario implements UserDetails {
     @ManyToOne
     @JoinColumn(name = "estacionamento_id")
     private Estacionamento estacionamento;
+
+    // NOVO (painel ADM): momento do cadastro, usado no gráfico de crescimento de usuários.
+    // Nulo para usuários cadastrados antes desta coluna existir.
+    @Column
+    private LocalDateTime criadoEm;
 
     public Usuario() {}
 
@@ -107,4 +113,7 @@ public class Usuario implements UserDetails {
     
     public Estacionamento getEstacionamento() { return estacionamento; }
     public void setEstacionamento(Estacionamento estacionamento) { this.estacionamento = estacionamento; }
+
+    public LocalDateTime getCriadoEm() { return criadoEm; }
+    public void setCriadoEm(LocalDateTime criadoEm) { this.criadoEm = criadoEm; }
 }

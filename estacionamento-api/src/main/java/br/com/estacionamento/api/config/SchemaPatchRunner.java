@@ -63,6 +63,10 @@ public class SchemaPatchRunner implements CommandLineRunner {
         COLUNAS_ESTADIA.forEach((coluna, tipo) ->
                 executar("ALTER TABLE estadias ADD COLUMN IF NOT EXISTS " + coluna + " " + tipo));
 
+        // NOVO (painel ADM): usada no gráfico de crescimento de usuários cadastrados.
+        // Nula para contas criadas antes desta coluna existir.
+        executar("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP");
+
         // Reservas pendentes (Estadia.pendente=true) ainda não têm horário de
         // entrada real - ele só é definido no check-in. A coluna "entrada"
         // veio do schema legado como NOT NULL, o que quebrava POST

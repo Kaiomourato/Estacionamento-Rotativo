@@ -1,6 +1,7 @@
 package br.com.estacionamento.api.repository;
 
 import br.com.estacionamento.api.model.Estadia;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -55,4 +56,20 @@ public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
 
     // NOVO (painel ADM): estadias em andamento agora, em QUALQUER estacionamento
     List<Estadia> findByAtivaTrueAndPendenteFalse();
+
+    // NOVO (painel ADM): estadias com entrada registrada a partir de uma data, em QUALQUER estacionamento
+    List<Estadia> findByEntradaIsNotNullAndEntradaGreaterThanEqual(LocalDateTime desde);
+
+    // NOVO (painel ADM): últimos check-ins e check-outs (tabelas do dashboard), globais ou de um estacionamento
+    List<Estadia> findByEntradaIsNotNullOrderByEntradaDesc(Pageable pageable);
+
+    List<Estadia> findBySaidaIsNotNullOrderBySaidaDesc(Pageable pageable);
+
+    List<Estadia> findByVagaEstacionamentoIdAndEntradaIsNotNullOrderByEntradaDesc(Long estacionamentoId, Pageable pageable);
+
+    List<Estadia> findByVagaEstacionamentoIdAndSaidaIsNotNullOrderBySaidaDesc(Long estacionamentoId, Pageable pageable);
+
+    // NOVO (painel ADM): ranking de estacionamentos por quantidade de estadias já registradas
+    @Query("SELECT e.vaga.estacionamento.id, COUNT(e) FROM Estadia e GROUP BY e.vaga.estacionamento.id")
+    List<Object[]> contarEstadiasPorEstacionamento();
 }

@@ -10,6 +10,7 @@ import br.com.estacionamento.api.repository.UsuarioRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Service
@@ -35,6 +36,7 @@ public class AuthService {
         Usuario usuario = new Usuario();
         usuario.setEmail(dto.getEmail());
         usuario.setSenha(passwordEncoder.encode(dto.getSenha()));
+        usuario.setCriadoEm(LocalDateTime.now());
 
         // Se a role não for enviada, assume o padrão "USER" (Motorista)
         if (dto.getRole() == null || dto.getRole().isBlank()) {

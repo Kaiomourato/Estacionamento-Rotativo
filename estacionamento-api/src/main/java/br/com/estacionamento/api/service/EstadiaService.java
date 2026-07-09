@@ -46,6 +46,7 @@ public class EstadiaService {
     private final EstacionamentoService estacionamentoService;
 
     private final Map<Long, RelatorioCacheEntry> relatorioCache = new ConcurrentHashMap<>();
+    private volatile RelatorioCacheEntry relatorioGlobalCache;
 
     public EstadiaService(EstadiaRepository repository, UsuarioRepository usuarioRepository,
                           VeiculoRepository veiculoRepository, VagaRepository vagaRepository,
@@ -322,20 +323,61 @@ public class EstadiaService {
         Long estacionamentoId = estacionamento.getId();
         LocalDateTime agora = LocalDateTime.now();
 
-        // Faturamento em aberto: estadias em uso, calculado pelo tempo decorrido até agora
         List<Estadia> emAndamento = repository.findByVagaEstacionamentoIdAndAtivaTrueAndPendenteFalse(estacionamentoId);
+
+        // Janela de 12 meses cobre semana/mês/ano e os gráficos
+        LocalDateTime inicio12Meses = YearMonth.from(agora.toLocalDate()).minusMonths(11).atDay(1).atStartOfDay();
+        List<Estadia> finalizadas = repository.findByVagaEstacionamentoIdAndSaidaIsNotNullAndSaidaGreaterThanEqual(estacionamentoId, inicio12Meses);
+
+        LocalDateTime inicioSemana = agora.toLocalDate().minusDays(6).atStartOfDay();
+        List<Estadia> entradasRecentes = repository.findByVagaEstacionamentoIdAndEntradaIsNotNullAndEntradaGreaterThanEqual(estacionamentoId, inicioSemana);
+
+        return montarRelatorioComum(emAndamento, finalizadas, entradasRecentes);
+    }
+
+    // Relatório/dashboard do admin: mesma lógica do operador, mas somando entre
+    // TODOS os estacionamentos (sem filtro de estacionamentoId), com cache curto próprio.
+    public RelatorioOperadorDTO gerarRelatorioGlobal() {
+        long agora = System.currentTimeMillis();
+        RelatorioCacheEntry cacheEntry = relatorioGlobalCache;
+        if (cacheEntry != null && (agora - cacheEntry.timestamp) < RELATORIO_CACHE_TTL_MS) {
+            return cacheEntry.dto;
+        }
+
+        RelatorioOperadorDTO relatorio = montarRelatorioGlobal();
+        relatorioGlobalCache = new RelatorioCacheEntry(relatorio, agora);
+        return relatorio;
+    }
+
+    private RelatorioOperadorDTO montarRelatorioGlobal() {
+        LocalDateTime agora = LocalDateTime.now();
+
+        List<Estadia> emAndamento = repository.findByAtivaTrueAndPendenteFalse();
+
+        LocalDateTime inicio12Meses = YearMonth.from(agora.toLocalDate()).minusMonths(11).atDay(1).atStartOfDay();
+        List<Estadia> finalizadas = repository.findBySaidaIsNotNullAndSaidaGreaterThanEqual(inicio12Meses);
+
+        LocalDateTime inicioSemana = agora.toLocalDate().minusDays(6).atStartOfDay();
+        List<Estadia> entradasRecentes = repository.findByEntradaIsNotNullAndEntradaGreaterThanEqual(inicioSemana);
+
+        return montarRelatorioComum(emAndamento, finalizadas, entradasRecentes);
+    }
+
+    // Lógica de agregação compartilhada entre o relatório do operador (filtrado por
+    // estacionamento) e o do admin (global): calcula o valor da hora a partir do
+    // próprio estacionamento de cada estadia, então funciona igual nos dois casos.
+    private RelatorioOperadorDTO montarRelatorioComum(List<Estadia> emAndamento, List<Estadia> finalizadas, List<Estadia> entradasRecentes) {
+        LocalDateTime agora = LocalDateTime.now();
+
+        // Faturamento em aberto: estadias em uso, calculado pelo tempo decorrido até agora
         double aberto = 0.0;
         for (Estadia e : emAndamento) {
             if (e.getEntrada() == null) continue;
             long horas = ChronoUnit.HOURS.between(e.getEntrada(), agora);
             if (horas == 0) horas = 1;
-            Double valorHora = estacionamentoService.obterValorHora(estacionamento, e.getVeiculo().getTipo());
+            Double valorHora = estacionamentoService.obterValorHora(e.getVaga().getEstacionamento(), e.getVeiculo().getTipo());
             aberto += horas * valorHora;
         }
-
-        // Janela de 12 meses cobre semana/mês/ano e os gráficos
-        LocalDateTime inicio12Meses = YearMonth.from(agora.toLocalDate()).minusMonths(11).atDay(1).atStartOfDay();
-        List<Estadia> finalizadas = repository.findByVagaEstacionamentoIdAndSaidaIsNotNullAndSaidaGreaterThanEqual(estacionamentoId, inicio12Meses);
 
         LocalDateTime inicioSemana = agora.toLocalDate().minusDays(6).atStartOfDay();
         LocalDateTime inicioMes = agora.toLocalDate().withDayOfMonth(1).atStartOfDay();
@@ -352,7 +394,6 @@ public class EstadiaService {
         }
 
         // Fluxo dos últimos 7 dias (entradas x saídas)
-        List<Estadia> entradasRecentes = repository.findByVagaEstacionamentoIdAndEntradaIsNotNullAndEntradaGreaterThanEqual(estacionamentoId, inicioSemana);
         DateTimeFormatter fmtDia = DateTimeFormatter.ofPattern("dd/MM");
         List<FluxoDiaDTO> fluxoSemanal = new ArrayList<>();
         for (int i = 6; i >= 0; i--) {
