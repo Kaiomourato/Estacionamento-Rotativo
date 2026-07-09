@@ -28,7 +28,7 @@ public class EstacionamentoService {
     }
 
     public List<Estacionamento> listarTodos() {
-        return repository.findAll();
+        return repository.findAllComVagas();
     }
 
     public List<Estacionamento> buscarProximos(Double lat, Double lng, Double raio) {
@@ -48,9 +48,14 @@ public class EstacionamentoService {
         return buscarEstacionamentoDoOperador(email);
     }
 
-    // NOVO: Atualiza os dados editáveis nas Configurações (nome, endereço e valor da hora)
-    public Estacionamento atualizar(Long id, Estacionamento dados) {
+    // NOVO: Atualiza os dados editáveis nas Configurações (nome, endereço e valor da hora).
+    // "email" é quem está autenticado fazendo a chamada: só o próprio operador dono deste
+    // estacionamento (ou um ADMIN) pode editá-lo — antes qualquer usuário autenticado
+    // conseguia editar o estacionamento de qualquer outro operador.
+    public Estacionamento atualizar(Long id, Estacionamento dados, String email) {
         Estacionamento est = buscarPorId(id);
+        verificarPermissaoDeEdicao(est, email);
+
         est.setNome(dados.getNome());
         est.setValorHora(dados.getValorHora());
         est.setEndereco(dados.getEndereco());
@@ -61,6 +66,18 @@ public class EstacionamentoService {
             est.setLongitude(dados.getLongitude());
         }
         return repository.save(est);
+    }
+
+    private void verificarPermissaoDeEdicao(Estacionamento estacionamento, String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+
+        boolean isAdmin = "ADMIN".equalsIgnoreCase(usuario.getRole());
+        boolean isDono = usuario.getEstacionamento() != null && usuario.getEstacionamento().getId().equals(estacionamento.getId());
+
+        if (!isAdmin && !isDono) {
+            throw new RuntimeException("Você não tem permissão para editar este estacionamento.");
+        }
     }
 
     private Estacionamento buscarEstacionamentoDoOperador(String email) {

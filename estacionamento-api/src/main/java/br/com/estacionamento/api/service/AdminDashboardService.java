@@ -65,7 +65,7 @@ public class AdminDashboardService {
     }
 
     public DashboardAdminDTO montarDashboard(Long estacionamentoId) {
-        List<Estacionamento> estacionamentos = estacionamentoRepository.findAll();
+        List<Estacionamento> estacionamentos = estacionamentoRepository.findAllComVagas();
 
         RelatorioOperadorDTO financeiro = estacionamentoId != null
                 ? estadiaService.gerarRelatorioPorEstacionamento(buscarEstacionamento(estacionamentoId))
@@ -230,12 +230,11 @@ public class AdminDashboardService {
 
     private List<RankingEstacionamentoDTO> montarTopEstacionamentos(List<Estacionamento> estacionamentos) {
         Map<Long, Long> contagemPorEstacionamento = new HashMap<>();
-        for (Object[] linha : estadiaRepository.contarEstadiasPorEstacionamento()) {
-            contagemPorEstacionamento.put((Long) linha[0], (Long) linha[1]);
-        }
         Map<Long, Double> faturamentoPorEstacionamento = new HashMap<>();
-        for (Object[] linha : estadiaRepository.somarFaturamentoPorEstacionamento()) {
-            faturamentoPorEstacionamento.put((Long) linha[0], (Double) linha[1]);
+        for (Object[] linha : estadiaRepository.calcularEstatisticasPorEstacionamento()) {
+            Long estacionamentoId = (Long) linha[0];
+            contagemPorEstacionamento.put(estacionamentoId, (Long) linha[1]);
+            faturamentoPorEstacionamento.put(estacionamentoId, (Double) linha[2]);
         }
 
         return estacionamentos.stream()

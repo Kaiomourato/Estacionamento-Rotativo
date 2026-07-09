@@ -1,6 +1,9 @@
 package br.com.estacionamento.api.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
@@ -14,19 +17,25 @@ public class Estacionamento {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "O nome do estacionamento é obrigatório.")
     @Column(nullable = false)
     private String nome;
 
+    @NotBlank(message = "O endereço é obrigatório.")
     @Column(nullable = false)
     private String endereco;
 
-    @Column(nullable = false)
+    // Nula quando o cliente não conseguiu obter a localização (ex.: geolocalização
+    // negada no cadastro) — a coluna aceita NULL (ver SchemaPatchRunner).
+    @Column
     private Double latitude;
 
-    @Column(nullable = false)
+    @Column
     private Double longitude;
 
     // Valor padrão da hora, usado para tipos de veículo sem preço específico cadastrado
+    @NotNull(message = "O valor por hora é obrigatório.")
+    @Positive(message = "O valor por hora deve ser maior que zero.")
     @Column(nullable = false)
     private Double valorHora;
 

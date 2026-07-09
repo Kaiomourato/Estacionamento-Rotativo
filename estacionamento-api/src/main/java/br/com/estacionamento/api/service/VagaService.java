@@ -61,13 +61,18 @@ public class VagaService {
         return repository.save(vaga);
     }
 
-    public Vaga atualizar(Long id, VagaRequestDTO dto, String email) {
-        Estacionamento estacionamento = buscarEstacionamentoDoOperador(email);
-        Vaga vaga = buscarPorId(id);
-
+    // Checagem de posse reaproveitada por toda operação que só o dono da vaga pode fazer
+    // (editar, excluir, ocupar/liberar manualmente).
+    private void verificarPropriedade(Vaga vaga, Estacionamento estacionamento) {
         if (!vaga.getEstacionamento().getId().equals(estacionamento.getId())) {
             throw new RuntimeException("Esta vaga não pertence ao seu estacionamento");
         }
+    }
+
+    public Vaga atualizar(Long id, VagaRequestDTO dto, String email) {
+        Estacionamento estacionamento = buscarEstacionamentoDoOperador(email);
+        Vaga vaga = buscarPorId(id);
+        verificarPropriedade(vaga, estacionamento);
 
         if (dto.getCodigo() != null && !dto.getCodigo().isBlank() && !dto.getCodigo().equals(vaga.getCodigo())) {
             if (repository.findByEstacionamentoIdAndCodigoAndAtivoTrue(estacionamento.getId(), dto.getCodigo()).isPresent()) {
@@ -140,8 +145,13 @@ public class VagaService {
                 .orElseThrow(() -> new RecursoNaoEncontradoException("Vaga não encontrada"));
     }
 
-    public Vaga ocuparVaga(Long id) {
+    // Antes não checava dono: qualquer usuário autenticado (de qualquer estacionamento)
+    // conseguia ocupar/liberar a vaga de outro operador só sabendo o ID (IDOR).
+    public Vaga ocuparVaga(Long id, String email) {
+        Estacionamento estacionamento = buscarEstacionamentoDoOperador(email);
         Vaga vaga = buscarPorId(id);
+        verificarPropriedade(vaga, estacionamento);
+
         if (vaga.isOcupada()) {
             throw new RuntimeException("Vaga já está ocupada");
         }
@@ -149,8 +159,11 @@ public class VagaService {
         return repository.save(vaga);
     }
 
-    public Vaga liberarVaga(Long id) {
+    public Vaga liberarVaga(Long id, String email) {
+        Estacionamento estacionamento = buscarEstacionamentoDoOperador(email);
         Vaga vaga = buscarPorId(id);
+        verificarPropriedade(vaga, estacionamento);
+
         if (!vaga.isOcupada()) {
             throw new RuntimeException("Vaga já está livre");
         }

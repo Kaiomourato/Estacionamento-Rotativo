@@ -83,6 +83,12 @@ public class SchemaPatchRunner implements CommandLineRunner {
         // /estadias/reservar com 500 (constraint violation).
         executar("ALTER TABLE estadias ALTER COLUMN entrada DROP NOT NULL");
 
+        // O cadastro público (Registro.jsx) já enviava latitude/longitude nulas quando a
+        // geolocalização do navegador falhava/era negada, mas a coluna era NOT NULL —
+        // isso quebrava POST /estacionamentos com 500 (constraint violation) nesse caso.
+        executar("ALTER TABLE estacionamentos ALTER COLUMN latitude DROP NOT NULL");
+        executar("ALTER TABLE estacionamentos ALTER COLUMN longitude DROP NOT NULL");
+
         // Corrige vagas "fantasma": deixadas como ocupada=true por reservas que
         // falharam antes da correção acima, sem nenhuma estadia ativa associada.
         executar("UPDATE vagas SET ocupada = false WHERE ocupada = true "

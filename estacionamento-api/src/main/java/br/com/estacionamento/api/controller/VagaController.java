@@ -55,13 +55,13 @@ public class VagaController {
     }
 
     @PutMapping("/{id}/ocupar")
-    public ResponseEntity<Vaga> ocupar(@PathVariable Long id) {
-        return ResponseEntity.ok(service.ocuparVaga(id));
+    public ResponseEntity<Vaga> ocupar(@PathVariable Long id, Principal principal) {
+        return ResponseEntity.ok(service.ocuparVaga(id, principal.getName()));
     }
 
     @PutMapping("/{id}/liberar")
-    public ResponseEntity<Vaga> liberar(@PathVariable Long id) {
-        return ResponseEntity.ok(service.liberarVaga(id));
+    public ResponseEntity<Vaga> liberar(@PathVariable Long id, Principal principal) {
+        return ResponseEntity.ok(service.liberarVaga(id, principal.getName()));
     }
 
     @DeleteMapping("/{id}")

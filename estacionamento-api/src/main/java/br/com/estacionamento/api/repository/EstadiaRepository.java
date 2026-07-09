@@ -70,14 +70,11 @@ public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
 
     List<Estadia> findByVagaEstacionamentoIdAndSaidaIsNotNullOrderBySaidaDesc(Long estacionamentoId, Pageable pageable);
 
-    // NOVO (painel ADM): ranking de estacionamentos por quantidade de estadias já registradas
-    @Query("SELECT e.vaga.estacionamento.id, COUNT(e) FROM Estadia e GROUP BY e.vaga.estacionamento.id")
-    List<Object[]> contarEstadiasPorEstacionamento();
-
-    // NOVO (painel ADM): faturamento total (histórico) por estacionamento, para o
-    // indicador "estacionamento mais lucrativo" e o popup do mapa
-    @Query("SELECT e.vaga.estacionamento.id, COALESCE(SUM(e.valor), 0) FROM Estadia e WHERE e.valor IS NOT NULL GROUP BY e.vaga.estacionamento.id")
-    List<Object[]> somarFaturamentoPorEstacionamento();
+    // NOVO (painel ADM): ranking de estacionamentos — total de estadias e faturamento
+    // histórico, numa única query agrupada (antes eram duas consultas separadas).
+    // Cada linha: [estacionamentoId, totalEstadias, faturamentoTotal]
+    @Query("SELECT e.vaga.estacionamento.id, COUNT(e), COALESCE(SUM(e.valor), 0) FROM Estadia e GROUP BY e.vaga.estacionamento.id")
+    List<Object[]> calcularEstatisticasPorEstacionamento();
 
     // NOVO (painel ADM): página "Pagamentos" — estadias finalizadas (paga = valor calculado
     // no check-out), com filtro opcional por estacionamento e por período

@@ -54,8 +54,32 @@ public class GlobalExceptionHandler {
                 .body(Map.of("message", "Erro interno ao acessar os dados. Tente novamente mais tarde."));
     }
 
+    // NullPointerException é RuntimeException, mas nunca deveria virar um 400 "esperado":
+    // é sempre um bug. Precisa de handler específico (mais específico que o de baixo, então
+    // o Spring o escolhe primeiro) para logar em ERROR com stacktrace e não vazar uma
+    // mensagem tipo "Cannot invoke ... because ... is null" para o cliente.
+    @ExceptionHandler(NullPointerException.class)
+    public ResponseEntity<Map<String, String>> handleNullPointer(NullPointerException ex) {
+        log.error("NullPointerException não tratada", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "Erro interno inesperado. Tente novamente."));
+    }
+
+    // Regras de negócio (ex.: "Esta vaga já está ocupada") — mensagem já é segura para o
+    // cliente, mas também loga em WARN para não ficarem invisíveis nos logs do servidor.
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<Map<String, String>> handleRuntime(RuntimeException ex) {
+        log.warn("Regra de negócio rejeitou a requisição: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", ex.getMessage()));
+    }
+
+    // Rede de segurança final: qualquer exceção não coberta acima (inclusive checked
+    // exceptions) cai aqui em vez do Whitelabel Error Page padrão do Spring, mantendo o
+    // mesmo formato { "message": ... } que o frontend já sabe interpretar.
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
+        log.error("Erro não tratado", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "Erro interno inesperado. Tente novamente mais tarde."));
     }
 }

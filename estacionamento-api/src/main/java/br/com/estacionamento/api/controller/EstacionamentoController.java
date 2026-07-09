@@ -6,6 +6,7 @@ import br.com.estacionamento.api.model.Estacionamento;
 import br.com.estacionamento.api.model.PrecoVeiculo;
 import br.com.estacionamento.api.service.EstacionamentoService;
 import br.com.estacionamento.api.service.EstadiaService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.security.Principal;
@@ -38,7 +39,7 @@ public class EstacionamentoController {
     }
 
     @PostMapping
-    public ResponseEntity<Estacionamento> cadastrar(@RequestBody Estacionamento estacionamento) {
+    public ResponseEntity<Estacionamento> cadastrar(@RequestBody @Valid Estacionamento estacionamento) {
         return ResponseEntity.status(201).body(service.salvar(estacionamento));
     }
 
@@ -48,10 +49,11 @@ public class EstacionamentoController {
         return ResponseEntity.ok(service.buscarMeuEstacionamento(principal.getName()));
     }
 
-    // NOVO: Atualiza os dados (usado na aba configurações)
+    // NOVO: Atualiza os dados (usado na aba configurações). Só o operador dono deste
+    // estacionamento (ou um ADMIN) pode editá-lo — checado em EstacionamentoService.
     @PutMapping("/{id}")
-    public ResponseEntity<Estacionamento> atualizar(@PathVariable Long id, @RequestBody Estacionamento dados) {
-        return ResponseEntity.ok(service.atualizar(id, dados));
+    public ResponseEntity<Estacionamento> atualizar(@PathVariable Long id, @RequestBody @Valid Estacionamento dados, Principal principal) {
+        return ResponseEntity.ok(service.atualizar(id, dados, principal.getName()));
     }
 
     // Lista os valores de hora configurados por tipo de veículo
