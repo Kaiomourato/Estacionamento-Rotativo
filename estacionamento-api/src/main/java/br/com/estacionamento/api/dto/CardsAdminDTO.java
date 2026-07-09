@@ -1,71 +1,52 @@
 package br.com.estacionamento.api.dto;
 
+// Linha 1 (visão geral) + linha 2 (financeiro) do dashboard administrativo.
 public class CardsAdminDTO {
 
+    // Linha 1 — visão geral
     private long totalUsuarios;
-    private long totalAdministradores;
     private long totalOperadores;
-    private long totalMotoristas;
+    private long totalAdministradores;
     private long totalEstacionamentos;
-    private long estacionamentosAtivos;
-    private long estacionamentosInativos;
     private long totalVagas;
-    private long vagasLivres;
-    private long vagasOcupadas;
-    private long totalCheckins;
-    private long totalCheckouts;
-    private double faturamentoTotal;
-    private Double tempoMedioPermanenciaMinutos;
-    private long totalAcessos;
-    private long totalLogins;
-    private long usuariosAtivos24h;
-    private Integer picoUtilizacaoHora;
-    private double mediaDiariaUtilizacao;
+    private double taxaMediaOcupacao;
 
-    public CardsAdminDTO(long totalUsuarios, long totalAdministradores, long totalOperadores, long totalMotoristas,
-                          long totalEstacionamentos, long estacionamentosAtivos, long estacionamentosInativos,
-                          long totalVagas, long vagasLivres, long vagasOcupadas,
-                          long totalCheckins, long totalCheckouts, double faturamentoTotal, Double tempoMedioPermanenciaMinutos,
-                          long totalAcessos, long totalLogins, long usuariosAtivos24h,
-                          Integer picoUtilizacaoHora, double mediaDiariaUtilizacao) {
+    // Linha 2 — financeiro
+    private double receitaHoje;
+    private double receitaSemana;
+    private double receitaMes;
+    private double receitaAno;
+    private double ticketMedio;
+    private Double tempoMedioEstadiaMinutos;
+
+    public CardsAdminDTO(long totalUsuarios, long totalOperadores, long totalAdministradores,
+                          long totalEstacionamentos, long totalVagas, double taxaMediaOcupacao,
+                          double receitaHoje, double receitaSemana, double receitaMes, double receitaAno,
+                          double ticketMedio, Double tempoMedioEstadiaMinutos) {
         this.totalUsuarios = totalUsuarios;
-        this.totalAdministradores = totalAdministradores;
         this.totalOperadores = totalOperadores;
-        this.totalMotoristas = totalMotoristas;
+        this.totalAdministradores = totalAdministradores;
         this.totalEstacionamentos = totalEstacionamentos;
-        this.estacionamentosAtivos = estacionamentosAtivos;
-        this.estacionamentosInativos = estacionamentosInativos;
         this.totalVagas = totalVagas;
-        this.vagasLivres = vagasLivres;
-        this.vagasOcupadas = vagasOcupadas;
-        this.totalCheckins = totalCheckins;
-        this.totalCheckouts = totalCheckouts;
-        this.faturamentoTotal = faturamentoTotal;
-        this.tempoMedioPermanenciaMinutos = tempoMedioPermanenciaMinutos;
-        this.totalAcessos = totalAcessos;
-        this.totalLogins = totalLogins;
-        this.usuariosAtivos24h = usuariosAtivos24h;
-        this.picoUtilizacaoHora = picoUtilizacaoHora;
-        this.mediaDiariaUtilizacao = mediaDiariaUtilizacao;
+        this.taxaMediaOcupacao = taxaMediaOcupacao;
+        this.receitaHoje = receitaHoje;
+        this.receitaSemana = receitaSemana;
+        this.receitaMes = receitaMes;
+        this.receitaAno = receitaAno;
+        this.ticketMedio = ticketMedio;
+        this.tempoMedioEstadiaMinutos = tempoMedioEstadiaMinutos;
     }
 
     public long getTotalUsuarios() { return totalUsuarios; }
-    public long getTotalAdministradores() { return totalAdministradores; }
     public long getTotalOperadores() { return totalOperadores; }
-    public long getTotalMotoristas() { return totalMotoristas; }
+    public long getTotalAdministradores() { return totalAdministradores; }
     public long getTotalEstacionamentos() { return totalEstacionamentos; }
-    public long getEstacionamentosAtivos() { return estacionamentosAtivos; }
-    public long getEstacionamentosInativos() { return estacionamentosInativos; }
     public long getTotalVagas() { return totalVagas; }
-    public long getVagasLivres() { return vagasLivres; }
-    public long getVagasOcupadas() { return vagasOcupadas; }
-    public long getTotalCheckins() { return totalCheckins; }
-    public long getTotalCheckouts() { return totalCheckouts; }
-    public double getFaturamentoTotal() { return faturamentoTotal; }
-    public Double getTempoMedioPermanenciaMinutos() { return tempoMedioPermanenciaMinutos; }
-    public long getTotalAcessos() { return totalAcessos; }
-    public long getTotalLogins() { return totalLogins; }
-    public long getUsuariosAtivos24h() { return usuariosAtivos24h; }
-    public Integer getPicoUtilizacaoHora() { return picoUtilizacaoHora; }
-    public double getMediaDiariaUtilizacao() { return mediaDiariaUtilizacao; }
+    public double getTaxaMediaOcupacao() { return taxaMediaOcupacao; }
+    public double getReceitaHoje() { return receitaHoje; }
+    public double getReceitaSemana() { return receitaSemana; }
+    public double getReceitaMes() { return receitaMes; }
+    public double getReceitaAno() { return receitaAno; }
+    public double getTicketMedio() { return ticketMedio; }
+    public Double getTempoMedioEstadiaMinutos() { return tempoMedioEstadiaMinutos; }
 }

@@ -51,4 +51,12 @@ public class AuthController {
         authService.register(dto);
         return ResponseEntity.status(201).body("Usuário cadastrado com sucesso");
     }
+
+    // JWT é stateless — não há sessão para invalidar no servidor. Esta rota existe
+    // apenas para que o logout vire um evento de auditoria (LogAcessoFilter registra
+    // toda requisição), com o e-mail/role capturados a partir do próprio token enviado.
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout() {
+        return ResponseEntity.noContent().build();
+    }
 }

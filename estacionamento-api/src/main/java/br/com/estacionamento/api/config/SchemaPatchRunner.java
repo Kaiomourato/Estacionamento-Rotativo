@@ -67,6 +67,16 @@ public class SchemaPatchRunner implements CommandLineRunner {
         // Nula para contas criadas antes desta coluna existir.
         executar("ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS criado_em TIMESTAMP");
 
+        // NOVO (auditoria): campos ricos de contexto para cada requisição registrada.
+        // Nulos para os logs já existentes antes desta coluna existir.
+        executar("ALTER TABLE logs_acesso ADD COLUMN IF NOT EXISTS role VARCHAR(30)");
+        executar("ALTER TABLE logs_acesso ADD COLUMN IF NOT EXISTS ip VARCHAR(64)");
+        executar("ALTER TABLE logs_acesso ADD COLUMN IF NOT EXISTS user_agent VARCHAR(512)");
+        executar("ALTER TABLE logs_acesso ADD COLUMN IF NOT EXISTS navegador VARCHAR(50)");
+        executar("ALTER TABLE logs_acesso ADD COLUMN IF NOT EXISTS sistema_operacional VARCHAR(50)");
+        executar("ALTER TABLE logs_acesso ADD COLUMN IF NOT EXISTS tipo_evento VARCHAR(50)");
+        executar("ALTER TABLE logs_acesso ADD COLUMN IF NOT EXISTS descricao VARCHAR(255)");
+
         // Reservas pendentes (Estadia.pendente=true) ainda não têm horário de
         // entrada real - ele só é definido no check-in. A coluna "entrada"
         // veio do schema legado como NOT NULL, o que quebrava POST

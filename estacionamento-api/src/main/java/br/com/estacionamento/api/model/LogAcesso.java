@@ -26,6 +26,30 @@ public class LogAcesso {
     @Column(nullable = false)
     private LocalDateTime dataHora;
 
+    // NOVO (auditoria): role do usuário autenticado no momento da requisição (nulo se anônimo)
+    @Column
+    private String role;
+
+    // NOVO (auditoria)
+    @Column
+    private String ip;
+
+    @Column(length = 512)
+    private String userAgent;
+
+    @Column
+    private String navegador;
+
+    @Column
+    private String sistemaOperacional;
+
+    @Enumerated(EnumType.STRING)
+    @Column
+    private TipoEventoLog tipoEvento;
+
+    @Column
+    private String descricao;
+
     public LogAcesso() {}
 
     public LogAcesso(String usuarioEmail, String metodo, String rota, Integer status, LocalDateTime dataHora) {
@@ -53,4 +77,25 @@ public class LogAcesso {
 
     public LocalDateTime getDataHora() { return dataHora; }
     public void setDataHora(LocalDateTime dataHora) { this.dataHora = dataHora; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public String getIp() { return ip; }
+    public void setIp(String ip) { this.ip = ip; }
+
+    public String getUserAgent() { return userAgent; }
+    public void setUserAgent(String userAgent) { this.userAgent = userAgent; }
+
+    public String getNavegador() { return navegador; }
+    public void setNavegador(String navegador) { this.navegador = navegador; }
+
+    public String getSistemaOperacional() { return sistemaOperacional; }
+    public void setSistemaOperacional(String sistemaOperacional) { this.sistemaOperacional = sistemaOperacional; }
+
+    public TipoEventoLog getTipoEvento() { return tipoEvento; }
+    public void setTipoEvento(TipoEventoLog tipoEvento) { this.tipoEvento = tipoEvento; }
+
+    public String getDescricao() { return descricao; }
+    public void setDescricao(String descricao) { this.descricao = descricao; }
 }

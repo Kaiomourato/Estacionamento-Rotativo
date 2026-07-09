@@ -306,6 +306,13 @@ public class EstadiaService {
     // Relatório/dashboard do operador, com cache curto para evitar recálculo a cada acesso
     public RelatorioOperadorDTO gerarRelatorio(String email) {
         Estacionamento estacionamento = estacionamentoService.buscarMeuEstacionamento(email);
+        return gerarRelatorioPorEstacionamento(estacionamento);
+    }
+
+    // Mesmo relatório, mas para um estacionamento já resolvido (usado pelo painel ADM
+    // quando o admin filtra o dashboard por um estacionamento específico). Reaproveita
+    // o mesmo cache por estacionamentoId usado pelo painel do operador.
+    public RelatorioOperadorDTO gerarRelatorioPorEstacionamento(Estacionamento estacionamento) {
         Long estacionamentoId = estacionamento.getId();
 
         RelatorioCacheEntry cacheEntry = relatorioCache.get(estacionamentoId);
@@ -379,15 +386,18 @@ public class EstadiaService {
             aberto += horas * valorHora;
         }
 
+        LocalDateTime inicioHoje = agora.toLocalDate().atStartOfDay();
         LocalDateTime inicioSemana = agora.toLocalDate().minusDays(6).atStartOfDay();
         LocalDateTime inicioMes = agora.toLocalDate().withDayOfMonth(1).atStartOfDay();
         LocalDateTime inicioAno = agora.toLocalDate().withDayOfYear(1).atStartOfDay();
 
+        double hoje = 0;
         double semana = 0;
         double mes = 0;
         double ano = 0;
         for (Estadia e : finalizadas) {
             double valor = e.getValor() != null ? e.getValor() : 0.0;
+            if (!e.getSaida().isBefore(inicioHoje)) hoje += valor;
             if (!e.getSaida().isBefore(inicioSemana)) semana += valor;
             if (!e.getSaida().isBefore(inicioMes)) mes += valor;
             if (!e.getSaida().isBefore(inicioAno)) ano += valor;
@@ -419,7 +429,7 @@ public class EstadiaService {
             faturamentoMensal.add(new FaturamentoMensalDTO(label, arredondar(total)));
         }
 
-        FaturamentoDTO faturamento = new FaturamentoDTO(arredondar(aberto), arredondar(semana), arredondar(mes), arredondar(ano));
+        FaturamentoDTO faturamento = new FaturamentoDTO(arredondar(aberto), arredondar(hoje), arredondar(semana), arredondar(mes), arredondar(ano));
         return new RelatorioOperadorDTO(faturamento, fluxoSemanal, faturamentoMensal);
     }
 

@@ -2,18 +2,25 @@ package br.com.estacionamento.api.service;
 
 import br.com.estacionamento.api.dto.CardsAdminDTO;
 import br.com.estacionamento.api.dto.DashboardAdminDTO;
+import br.com.estacionamento.api.dto.FaturamentoMensalDTO;
+import br.com.estacionamento.api.dto.IndicadoresAdminDTO;
 import br.com.estacionamento.api.dto.RankingEstacionamentoDTO;
 import br.com.estacionamento.api.dto.RelatorioOperadorDTO;
 import br.com.estacionamento.api.dto.SerieContagemDTO;
 import br.com.estacionamento.api.dto.UsuarioResumoDTO;
+import br.com.estacionamento.api.exception.RecursoNaoEncontradoException;
 import br.com.estacionamento.api.model.Estacionamento;
 import br.com.estacionamento.api.model.Estadia;
 import br.com.estacionamento.api.model.LogAcesso;
 import br.com.estacionamento.api.model.Usuario;
+import br.com.estacionamento.api.model.Vaga;
 import br.com.estacionamento.api.repository.EstacionamentoRepository;
 import br.com.estacionamento.api.repository.EstadiaRepository;
 import br.com.estacionamento.api.repository.LogAcessoRepository;
 import br.com.estacionamento.api.repository.UsuarioRepository;
+import br.com.estacionamento.api.repository.VagaRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -21,7 +28,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -30,9 +36,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-// Orquestra o dashboard do painel ADM: combina os repositórios existentes e a
-// agregação financeira já usada no painel do operador (EstadiaService.gerarRelatorioGlobal),
-// sem duplicar nenhuma lógica de cálculo.
+// Orquestra o dashboard do painel ADM e as listagens administrativas (usuários,
+// vagas, pagamentos), combinando os repositórios existentes com a agregação
+// financeira já usada no painel do operador (EstadiaService), sem duplicar lógica.
 @Service
 public class AdminDashboardService {
 
@@ -43,93 +49,131 @@ public class AdminDashboardService {
     private final UsuarioRepository usuarioRepository;
     private final EstacionamentoRepository estacionamentoRepository;
     private final EstadiaRepository estadiaRepository;
+    private final VagaRepository vagaRepository;
     private final LogAcessoRepository logAcessoRepository;
     private final EstadiaService estadiaService;
 
     public AdminDashboardService(UsuarioRepository usuarioRepository, EstacionamentoRepository estacionamentoRepository,
-                                  EstadiaRepository estadiaRepository, LogAcessoRepository logAcessoRepository,
-                                  EstadiaService estadiaService) {
+                                  EstadiaRepository estadiaRepository, VagaRepository vagaRepository,
+                                  LogAcessoRepository logAcessoRepository, EstadiaService estadiaService) {
         this.usuarioRepository = usuarioRepository;
         this.estacionamentoRepository = estacionamentoRepository;
         this.estadiaRepository = estadiaRepository;
+        this.vagaRepository = vagaRepository;
         this.logAcessoRepository = logAcessoRepository;
         this.estadiaService = estadiaService;
     }
 
-    public DashboardAdminDTO montarDashboard(LocalDate inicio, LocalDate fim, Long estacionamentoId) {
-        LocalDate hoje = LocalDate.now();
-        LocalDate inicioEfetivo = inicio != null ? inicio : hoje.minusDays(29);
-        LocalDate fimEfetivo = fim != null ? fim : hoje;
-        LocalDateTime desde = inicioEfetivo.atStartOfDay();
-        LocalDateTime ate = fimEfetivo.plusDays(1).atStartOfDay();
-        long dias = Math.max(1, ChronoUnit.DAYS.between(inicioEfetivo, fimEfetivo) + 1);
-
+    public DashboardAdminDTO montarDashboard(Long estacionamentoId) {
         List<Estacionamento> estacionamentos = estacionamentoRepository.findAll();
 
-        CardsAdminDTO cards = montarCards(desde, ate, dias, estacionamentoId, estacionamentos);
-        RelatorioOperadorDTO financeiro = estadiaService.gerarRelatorioGlobal();
-        List<SerieContagemDTO> checkinsPorMes = montarCheckinsPorMes(estacionamentoId);
-        List<SerieContagemDTO> horariosMovimento = montarHorariosMovimento(desde, ate, estacionamentoId);
-        List<SerieContagemDTO> crescimentoUsuarios = montarCrescimentoUsuarios();
-        List<RankingEstacionamentoDTO> ocupacaoEstacionamentos = montarRankingEstacionamentos(estacionamentos);
+        RelatorioOperadorDTO financeiro = estacionamentoId != null
+                ? estadiaService.gerarRelatorioPorEstacionamento(buscarEstacionamento(estacionamentoId))
+                : estadiaService.gerarRelatorioGlobal();
 
-        return new DashboardAdminDTO(cards, financeiro, checkinsPorMes, horariosMovimento, crescimentoUsuarios, ocupacaoEstacionamentos);
+        LocalDateTime inicioMes = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        List<Estadia> checkoutsMes = buscarSaidasDesde(estacionamentoId, inicioMes);
+
+        List<SerieContagemDTO> checkinsPorMes = montarCheckinsPorMes(estacionamentoId);
+        List<SerieContagemDTO> horariosMovimento = montarHorariosMovimento(estacionamentoId);
+        List<SerieContagemDTO> crescimentoUsuarios = montarCrescimentoUsuarios();
+        List<RankingEstacionamentoDTO> topEstacionamentos = montarTopEstacionamentos(estacionamentos);
+
+        CardsAdminDTO cards = montarCards(estacionamentoId, estacionamentos, financeiro, checkoutsMes);
+        IndicadoresAdminDTO indicadores = montarIndicadores(estacionamentoId, financeiro, crescimentoUsuarios, topEstacionamentos, checkoutsMes);
+
+        return new DashboardAdminDTO(cards, indicadores, financeiro, checkinsPorMes, horariosMovimento, crescimentoUsuarios, topEstacionamentos);
     }
 
-    private CardsAdminDTO montarCards(LocalDateTime desde, LocalDateTime ate, long dias, Long estacionamentoId,
-                                       List<Estacionamento> estacionamentos) {
+    private Estacionamento buscarEstacionamento(Long id) {
+        return estacionamentoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Estacionamento não encontrado"));
+    }
+
+    private CardsAdminDTO montarCards(Long estacionamentoId, List<Estacionamento> estacionamentos,
+                                       RelatorioOperadorDTO financeiro, List<Estadia> checkoutsMes) {
         long totalUsuarios = usuarioRepository.count();
+        long totalOperadores = usuarioRepository.countByRole("OPERADOR");
         long totalAdministradores = usuarioRepository.countByRole("ADMIN");
-        long totalOperadores = usuarioRepository.countByRoleAndEstacionamentoIsNotNull("USER");
-        long totalMotoristas = usuarioRepository.countByRoleAndEstacionamentoIsNull("USER");
         long totalEstacionamentos = estacionamentos.size();
 
-        // "Ativo" = tem ao menos uma vaga ativa (sem coluna dedicada no schema)
-        long estacionamentosAtivos = estacionamentos.stream().filter(e -> e.getVagasTotais() > 0).count();
-        long estacionamentosInativos = totalEstacionamentos - estacionamentosAtivos;
+        List<Estacionamento> escopo = escopoEstacionamentos(estacionamentoId, estacionamentos);
+        long totalVagas = escopo.stream().mapToLong(Estacionamento::getVagasTotais).sum();
+        long vagasOcupadas = escopo.stream().mapToLong(Estacionamento::getVagasOcupadas).sum();
+        double taxaMediaOcupacao = totalVagas > 0 ? arredondar(vagasOcupadas * 100.0 / totalVagas) : 0.0;
 
-        long totalVagas = estacionamentos.stream().mapToLong(Estacionamento::getVagasTotais).sum();
-        long vagasOcupadas = estacionamentos.stream().mapToLong(Estacionamento::getVagasOcupadas).sum();
-        long vagasLivres = totalVagas - vagasOcupadas;
+        long totalPagamentosMes = checkoutsMes.size();
+        double receitaMesCalculada = checkoutsMes.stream().mapToDouble(e -> e.getValor() != null ? e.getValor() : 0.0).sum();
+        double ticketMedio = totalPagamentosMes > 0 ? arredondar(receitaMesCalculada / totalPagamentosMes) : 0.0;
 
-        List<Estadia> checkins = buscarEntradasDesde(estacionamentoId, desde).stream()
-                .filter(e -> e.getEntrada().isBefore(ate)).collect(Collectors.toList());
-        List<Estadia> checkouts = buscarSaidasDesde(estacionamentoId, desde).stream()
-                .filter(e -> e.getSaida().isBefore(ate)).collect(Collectors.toList());
-
-        long totalCheckins = checkins.size();
-        long totalCheckouts = checkouts.size();
-        double faturamentoTotal = arredondar(checkouts.stream().mapToDouble(e -> e.getValor() != null ? e.getValor() : 0.0).sum());
-
-        List<Estadia> comDuracao = checkouts.stream()
+        List<Estadia> comDuracao = checkoutsMes.stream()
                 .filter(e -> e.getEntrada() != null && e.getSaida() != null)
                 .collect(Collectors.toList());
-        Double tempoMedioPermanenciaMinutos = comDuracao.isEmpty() ? null : arredondar(
+        Double tempoMedioEstadiaMinutos = comDuracao.isEmpty() ? null : arredondar(
                 comDuracao.stream().mapToLong(e -> Duration.between(e.getEntrada(), e.getSaida()).toMinutes()).average().orElse(0));
 
-        List<LogAcesso> logsPeriodo = logAcessoRepository.findByDataHoraGreaterThanEqual(desde).stream()
-                .filter(l -> l.getDataHora().isBefore(ate)).collect(Collectors.toList());
-        long totalAcessos = logsPeriodo.size();
-        long totalLogins = logsPeriodo.stream()
-                .filter(l -> l.getRota() != null && l.getRota().contains("/auth/login") && Integer.valueOf(200).equals(l.getStatus()))
-                .count();
-        long usuariosAtivos24h = logAcessoRepository.countUsuariosAtivosDesde(LocalDateTime.now().minusHours(24));
+        return new CardsAdminDTO(totalUsuarios, totalOperadores, totalAdministradores, totalEstacionamentos, totalVagas, taxaMediaOcupacao,
+                financeiro.getFaturamento().getHoje(), financeiro.getFaturamento().getSemana(),
+                financeiro.getFaturamento().getMes(), financeiro.getFaturamento().getAno(),
+                ticketMedio, tempoMedioEstadiaMinutos);
+    }
 
+    private IndicadoresAdminDTO montarIndicadores(Long estacionamentoId, RelatorioOperadorDTO financeiro,
+                                                   List<SerieContagemDTO> crescimentoUsuarios,
+                                                   List<RankingEstacionamentoDTO> topEstacionamentos,
+                                                   List<Estadia> checkoutsMes) {
+        LocalDate hoje = LocalDate.now();
+        LocalDateTime inicioHoje = hoje.atStartOfDay();
+
+        long totalCheckinsHoje = buscarEntradasDesde(estacionamentoId, inicioHoje).size();
+        long totalCheckoutsHoje = buscarSaidasDesde(estacionamentoId, inicioHoje).size();
+
+        // "Online" = proxy apertado (5 min) via logs de acesso — não há WebSocket/heartbeat
+        long usuariosOnline = logAcessoRepository.countUsuariosAtivosDesde(LocalDateTime.now().minusMinutes(5));
+
+        LocalDateTime inicio30Dias = LocalDate.now().minusDays(29).atStartOfDay();
+        List<LogAcesso> logs30Dias = logAcessoRepository.findByDataHoraGreaterThanEqual(inicio30Dias);
+        double mediaDiariaAcessos = arredondar((double) logs30Dias.size() / 30);
         Integer picoUtilizacaoHora = null;
-        if (!logsPeriodo.isEmpty()) {
+        if (!logs30Dias.isEmpty()) {
             long[] porHora = new long[24];
-            for (LogAcesso l : logsPeriodo) porHora[l.getDataHora().getHour()]++;
+            for (LogAcesso l : logs30Dias) porHora[l.getDataHora().getHour()]++;
             int hPico = 0;
             for (int h = 1; h < 24; h++) if (porHora[h] > porHora[hPico]) hPico = h;
             picoUtilizacaoHora = hPico;
         }
-        double mediaDiariaUtilizacao = arredondar((double) totalAcessos / dias);
 
-        return new CardsAdminDTO(totalUsuarios, totalAdministradores, totalOperadores, totalMotoristas,
-                totalEstacionamentos, estacionamentosAtivos, estacionamentosInativos,
-                totalVagas, vagasLivres, vagasOcupadas,
-                totalCheckins, totalCheckouts, faturamentoTotal, tempoMedioPermanenciaMinutos,
-                totalAcessos, totalLogins, usuariosAtivos24h, picoUtilizacaoHora, mediaDiariaUtilizacao);
+        double crescimentoUsuariosPercentual = calcularCrescimentoPercentual(
+                crescimentoUsuarios.size() >= 2 ? crescimentoUsuarios.get(crescimentoUsuarios.size() - 2).getQuantidade() : 0,
+                crescimentoUsuarios.isEmpty() ? 0 : crescimentoUsuarios.get(crescimentoUsuarios.size() - 1).getQuantidade());
+
+        List<FaturamentoMensalDTO> mensal = financeiro.getFaturamentoMensal();
+        double receitaMesAtual = mensal.isEmpty() ? 0 : mensal.get(mensal.size() - 1).getValor();
+        double receitaMesAnterior = mensal.size() >= 2 ? mensal.get(mensal.size() - 2).getValor() : 0;
+        double crescimentoFinanceiroPercentual = calcularCrescimentoPercentual(receitaMesAnterior, receitaMesAtual);
+
+        String estacionamentoMaisMovimentado = topEstacionamentos.isEmpty() ? null : topEstacionamentos.get(0).getNome();
+        String estacionamentoMaisLucrativo = topEstacionamentos.stream()
+                .max(Comparator.comparingDouble(RankingEstacionamentoDTO::getFaturamentoTotal))
+                .map(RankingEstacionamentoDTO::getNome).orElse(null);
+
+        int diaDoMes = hoje.getDayOfMonth();
+        int diasNoMes = YearMonth.from(hoje).lengthOfMonth();
+        double receitaPrevistaMes = diaDoMes > 0 ? arredondar((financeiro.getFaturamento().getMes() / diaDoMes) * diasNoMes) : 0.0;
+
+        return new IndicadoresAdminDTO(usuariosOnline, crescimentoUsuariosPercentual, crescimentoFinanceiroPercentual,
+                estacionamentoMaisMovimentado, estacionamentoMaisLucrativo, totalCheckinsHoje, totalCheckoutsHoje,
+                mediaDiariaAcessos, picoUtilizacaoHora, checkoutsMes.size(), receitaPrevistaMes);
+    }
+
+    private double calcularCrescimentoPercentual(double anterior, double atual) {
+        if (anterior <= 0) return atual > 0 ? 100.0 : 0.0;
+        return arredondar(((atual - anterior) / anterior) * 100.0);
+    }
+
+    private List<Estacionamento> escopoEstacionamentos(Long estacionamentoId, List<Estacionamento> todos) {
+        if (estacionamentoId == null) return todos;
+        return todos.stream().filter(e -> e.getId().equals(estacionamentoId)).collect(Collectors.toList());
     }
 
     private List<Estadia> buscarEntradasDesde(Long estacionamentoId, LocalDateTime desde) {
@@ -157,9 +201,10 @@ public class AdminDashboardService {
         return resultado;
     }
 
-    private List<SerieContagemDTO> montarHorariosMovimento(LocalDateTime desde, LocalDateTime ate, Long estacionamentoId) {
-        List<Estadia> entradas = buscarEntradasDesde(estacionamentoId, desde).stream()
-                .filter(e -> e.getEntrada().isBefore(ate)).collect(Collectors.toList());
+    // Últimos 30 dias — janela fixa (o dashboard não usa mais um filtro de período arbitrário)
+    private List<SerieContagemDTO> montarHorariosMovimento(Long estacionamentoId) {
+        LocalDateTime inicio30Dias = LocalDate.now().minusDays(29).atStartOfDay();
+        List<Estadia> entradas = buscarEntradasDesde(estacionamentoId, inicio30Dias);
 
         long[] porHora = new long[24];
         for (Estadia e : entradas) porHora[e.getEntrada().getHour()]++;
@@ -183,20 +228,26 @@ public class AdminDashboardService {
         return resultado;
     }
 
-    private List<RankingEstacionamentoDTO> montarRankingEstacionamentos(List<Estacionamento> estacionamentos) {
+    private List<RankingEstacionamentoDTO> montarTopEstacionamentos(List<Estacionamento> estacionamentos) {
         Map<Long, Long> contagemPorEstacionamento = new HashMap<>();
         for (Object[] linha : estadiaRepository.contarEstadiasPorEstacionamento()) {
             contagemPorEstacionamento.put((Long) linha[0], (Long) linha[1]);
+        }
+        Map<Long, Double> faturamentoPorEstacionamento = new HashMap<>();
+        for (Object[] linha : estadiaRepository.somarFaturamentoPorEstacionamento()) {
+            faturamentoPorEstacionamento.put((Long) linha[0], (Double) linha[1]);
         }
 
         return estacionamentos.stream()
                 .map(e -> {
                     long totalEstadias = contagemPorEstacionamento.getOrDefault(e.getId(), 0L);
+                    double faturamentoTotal = faturamentoPorEstacionamento.getOrDefault(e.getId(), 0.0);
                     long vagasTotais = e.getVagasTotais();
                     long vagasOcupadas = e.getVagasOcupadas();
                     long vagasLivres = e.getVagasLivres();
                     double ocupacaoPercentual = vagasTotais > 0 ? arredondar(vagasOcupadas * 100.0 / vagasTotais) : 0.0;
-                    return new RankingEstacionamentoDTO(e.getId(), e.getNome(), totalEstadias, vagasTotais, vagasOcupadas, vagasLivres, ocupacaoPercentual);
+                    return new RankingEstacionamentoDTO(e.getId(), e.getNome(), totalEstadias, vagasTotais, vagasOcupadas,
+                            vagasLivres, ocupacaoPercentual, arredondar(faturamentoTotal));
                 })
                 .sorted(Comparator.comparingLong(RankingEstacionamentoDTO::getTotalEstadias).reversed())
                 .collect(Collectors.toList());
@@ -204,14 +255,24 @@ public class AdminDashboardService {
 
     public List<UsuarioResumoDTO> listarUsuariosRecentes() {
         return usuarioRepository.findTop10ByOrderByIdDesc().stream()
-                .map(u -> new UsuarioResumoDTO(u.getId(), u.getEmail(), u.getRole(), tipoUsuario(u),
-                        u.getEstacionamento() != null ? u.getEstacionamento().getNome() : null, u.getCriadoEm()))
+                .map(this::paraResumo)
                 .collect(Collectors.toList());
+    }
+
+    // Listagem paginada e pesquisável — usada nas páginas Usuários e Operadores
+    // (Operadores = mesma listagem com role fixado em "OPERADOR")
+    public Page<UsuarioResumoDTO> listarUsuariosPaginado(String role, String busca, Pageable pageable) {
+        return usuarioRepository.buscarParaAdmin(vazioParaNulo(role), vazioParaNulo(busca), pageable).map(this::paraResumo);
+    }
+
+    private UsuarioResumoDTO paraResumo(Usuario u) {
+        return new UsuarioResumoDTO(u.getId(), u.getEmail(), u.getRole(), tipoUsuario(u),
+                u.getEstacionamento() != null ? u.getEstacionamento().getNome() : null, u.getCriadoEm());
     }
 
     private String tipoUsuario(Usuario usuario) {
         if ("ADMIN".equalsIgnoreCase(usuario.getRole())) return "ADMIN";
-        if (usuario.getEstacionamento() != null) return "OPERADOR";
+        if ("OPERADOR".equalsIgnoreCase(usuario.getRole()) || usuario.getEstacionamento() != null) return "OPERADOR";
         return "MOTORISTA";
     }
 
@@ -227,6 +288,22 @@ public class AdminDashboardService {
         return estacionamentoId != null
                 ? estadiaRepository.findByVagaEstacionamentoIdAndSaidaIsNotNullOrderBySaidaDesc(estacionamentoId, pagina)
                 : estadiaRepository.findBySaidaIsNotNullOrderBySaidaDesc(pagina);
+    }
+
+    // Página Vagas: todas as vagas de todos os estacionamentos, paginada e pesquisável
+    public Page<Vaga> listarVagasPaginado(Long estacionamentoId, String busca, Pageable pageable) {
+        return vagaRepository.buscarParaAdmin(estacionamentoId, vazioParaNulo(busca), pageable);
+    }
+
+    // Página Pagamentos: estadias finalizadas (com valor calculado no check-out)
+    public Page<Estadia> listarPagamentosPaginado(Long estacionamentoId, LocalDate inicio, LocalDate fim, Pageable pageable) {
+        LocalDateTime desde = inicio != null ? inicio.atStartOfDay() : null;
+        LocalDateTime ate = fim != null ? fim.plusDays(1).atStartOfDay() : null;
+        return estadiaRepository.buscarPagamentos(estacionamentoId, desde, ate, pageable);
+    }
+
+    private String vazioParaNulo(String valor) {
+        return (valor == null || valor.isBlank()) ? null : valor;
     }
 
     private String rotuloMes(YearMonth mes) {

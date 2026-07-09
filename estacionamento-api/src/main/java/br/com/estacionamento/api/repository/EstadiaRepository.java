@@ -1,6 +1,7 @@
 package br.com.estacionamento.api.repository;
 
 import br.com.estacionamento.api.model.Estadia;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -72,4 +73,19 @@ public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
     // NOVO (painel ADM): ranking de estacionamentos por quantidade de estadias já registradas
     @Query("SELECT e.vaga.estacionamento.id, COUNT(e) FROM Estadia e GROUP BY e.vaga.estacionamento.id")
     List<Object[]> contarEstadiasPorEstacionamento();
+
+    // NOVO (painel ADM): faturamento total (histórico) por estacionamento, para o
+    // indicador "estacionamento mais lucrativo" e o popup do mapa
+    @Query("SELECT e.vaga.estacionamento.id, COALESCE(SUM(e.valor), 0) FROM Estadia e WHERE e.valor IS NOT NULL GROUP BY e.vaga.estacionamento.id")
+    List<Object[]> somarFaturamentoPorEstacionamento();
+
+    // NOVO (painel ADM): página "Pagamentos" — estadias finalizadas (paga = valor calculado
+    // no check-out), com filtro opcional por estacionamento e por período
+    @Query("SELECT e FROM Estadia e WHERE e.saida IS NOT NULL AND e.valor IS NOT NULL AND " +
+            "(:estacionamentoId IS NULL OR e.vaga.estacionamento.id = :estacionamentoId) AND " +
+            "(:desde IS NULL OR e.saida >= :desde) AND (:ate IS NULL OR e.saida < :ate) " +
+            "ORDER BY e.saida DESC")
+    Page<Estadia> buscarPagamentos(@Param("estacionamentoId") Long estacionamentoId,
+                                    @Param("desde") LocalDateTime desde, @Param("ate") LocalDateTime ate,
+                                    Pageable pageable);
 }
