@@ -14,9 +14,11 @@ import java.util.List;
 public class NotificacaoService {
 
     private final NotificacaoRepository repository;
+    private final PushNotificationService pushNotificationService;
 
-    public NotificacaoService(NotificacaoRepository repository) {
+    public NotificacaoService(NotificacaoRepository repository, PushNotificationService pushNotificationService) {
         this.repository = repository;
+        this.pushNotificationService = pushNotificationService;
     }
 
     public Notificacao criar(Usuario destinatario, TipoNotificacao tipo, String titulo, String mensagem, Long estadiaId) {
@@ -26,7 +28,9 @@ public class NotificacaoService {
         notificacao.setTitulo(titulo);
         notificacao.setMensagem(mensagem);
         notificacao.setEstadiaId(estadiaId);
-        return repository.save(notificacao);
+        Notificacao salva = repository.save(notificacao);
+        pushNotificationService.enviar(destinatario, tipo, titulo, mensagem, estadiaId);
+        return salva;
     }
 
     public List<NotificacaoDTO> listar(String email) {
