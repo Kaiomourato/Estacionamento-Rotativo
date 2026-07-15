@@ -76,6 +76,10 @@ public interface EstadiaRepository extends JpaRepository<Estadia, Long> {
     @Query("SELECT e.vaga.estacionamento.id, COUNT(e), COALESCE(SUM(e.valor), 0) FROM Estadia e GROUP BY e.vaga.estacionamento.id")
     List<Object[]> calcularEstatisticasPorEstacionamento();
 
+    // Reservas pendentes com previsão de chegada definida (usado pelo NotificacaoScheduler
+    // para detectar reservas prestes a expirar e check-ins atrasados)
+    List<Estadia> findByPendenteTrueAndPrevisaoChegadaIsNotNull();
+
     // NOVO (painel ADM): página "Pagamentos" — estadias finalizadas (paga = valor calculado
     // no check-out), com filtro opcional por estacionamento e por período
     @Query("SELECT e FROM Estadia e WHERE e.saida IS NOT NULL AND e.valor IS NOT NULL AND " +

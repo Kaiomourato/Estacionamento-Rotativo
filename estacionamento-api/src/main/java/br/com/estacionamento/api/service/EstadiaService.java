@@ -7,6 +7,7 @@ import br.com.estacionamento.api.dto.RelatorioOperadorDTO;
 import br.com.estacionamento.api.exception.RecursoNaoEncontradoException;
 import br.com.estacionamento.api.model.Estacionamento;
 import br.com.estacionamento.api.model.Estadia;
+import br.com.estacionamento.api.model.TipoNotificacao;
 import br.com.estacionamento.api.model.TipoVeiculo;
 import br.com.estacionamento.api.model.Usuario;
 import br.com.estacionamento.api.model.Vaga;
@@ -44,18 +45,20 @@ public class EstadiaService {
     private final VeiculoRepository veiculoRepository;
     private final VagaRepository vagaRepository;
     private final EstacionamentoService estacionamentoService;
+    private final NotificacaoService notificacaoService;
 
     private final Map<Long, RelatorioCacheEntry> relatorioCache = new ConcurrentHashMap<>();
     private volatile RelatorioCacheEntry relatorioGlobalCache;
 
     public EstadiaService(EstadiaRepository repository, UsuarioRepository usuarioRepository,
                           VeiculoRepository veiculoRepository, VagaRepository vagaRepository,
-                          EstacionamentoService estacionamentoService) {
+                          EstacionamentoService estacionamentoService, NotificacaoService notificacaoService) {
         this.repository = repository;
         this.usuarioRepository = usuarioRepository;
         this.veiculoRepository = veiculoRepository;
         this.vagaRepository = vagaRepository;
         this.estacionamentoService = estacionamentoService;
+        this.notificacaoService = notificacaoService;
     }
 
     // AGORA É ISOLADO
@@ -196,7 +199,18 @@ public class EstadiaService {
         estadia.setCriadoEm(LocalDateTime.now());
         estadia.setPrevisaoChegada(parseDataHoraIso(previsaoChegadaIso));
 
-        return repository.save(estadia);
+        Estadia salva = repository.save(estadia);
+
+        List<Usuario> operadores = usuarioRepository.findByEstacionamentoIdAndRole(
+                vaga.getEstacionamento().getId(), "OPERADOR");
+        for (Usuario operador : operadores) {
+            notificacaoService.criar(operador, TipoNotificacao.NOVA_RESERVA,
+                    "Nova reserva recebida",
+                    "Placa " + veiculo.getPlaca() + " reservou a vaga " + vaga.getCodigo() + ".",
+                    salva.getId());
+        }
+
+        return salva;
     }
 
     // Converte uma string ISO-8601 (com ou sem offset/"Z") para LocalDateTime no fuso do servidor
@@ -230,7 +244,14 @@ public class EstadiaService {
         estadia.setEntrada(LocalDateTime.now());
         estadia.setPendente(false);
 
-        return repository.save(estadia);
+        Estadia salva = repository.save(estadia);
+
+        notificacaoService.criar(estadia.getVeiculo().getUsuario(), TipoNotificacao.CHECKIN_CONFIRMADO,
+                "Check-in confirmado",
+                "Seu check-in na vaga " + estadia.getVaga().getCodigo() + " foi confirmado.",
+                salva.getId());
+
+        return salva;
     }
 
     // Operador cancela uma reserva pendente (ainda sem check-in), liberando a vaga
@@ -263,7 +284,15 @@ public class EstadiaService {
         vaga.setOcupada(false);
         vagaRepository.save(vaga);
 
-        return repository.save(estadia);
+        Estadia salva = repository.save(estadia);
+
+        notificacaoService.criar(estadia.getVeiculo().getUsuario(), TipoNotificacao.RESERVA_CANCELADA,
+                "Reserva cancelada",
+                "Sua reserva na vaga " + vaga.getCodigo() + " do estacionamento "
+                        + vaga.getEstacionamento().getNome() + " foi cancelada pelo operador.",
+                salva.getId());
+
+        return salva;
     }
 
     private String gerarCodigo() {
@@ -300,7 +329,14 @@ public class EstadiaService {
         Double valorHora = estacionamentoService.obterValorHora(vaga.getEstacionamento(), estadia.getVeiculo().getTipo());
         estadia.setValor(horas * valorHora);
 
-        return repository.save(estadia);
+        Estadia salva = repository.save(estadia);
+
+        notificacaoService.criar(estadia.getVeiculo().getUsuario(), TipoNotificacao.ESTADIA_FINALIZADA,
+                "Estadia finalizada",
+                String.format("Sua estadia foi finalizada. Valor a pagar: R$ %.2f", estadia.getValor()),
+                salva.getId());
+
+        return salva;
     }
 
     // Relatório/dashboard do operador, com cache curto para evitar recálculo a cada acesso
