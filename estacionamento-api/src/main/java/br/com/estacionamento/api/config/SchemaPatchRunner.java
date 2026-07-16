@@ -139,9 +139,15 @@ public class SchemaPatchRunner implements CommandLineRunner {
     // já corrigido) isso é um no-op silencioso.
     private void corrigirTipoColunaEmailUsuarios() {
         try {
-            String tipo = jdbcTemplate.queryForObject(
+            // DIAGNÓSTICO TEMPORÁRIO — a hipótese inicial (coluna usuarios.email como bytea)
+            // não se confirmou num primeiro deploy: o log abaixo prova o valor real
+            // retornado pelo Postgres antes de decidir qualquer correção.
+            java.util.List<String> tipos = jdbcTemplate.queryForList(
                     "SELECT data_type FROM information_schema.columns WHERE LOWER(table_name) = 'usuarios' AND LOWER(column_name) = 'email'",
                     String.class);
+            log.info("[DIAG] usuarios.email — data_type reportado pelo information_schema: {}", tipos);
+
+            String tipo = tipos.isEmpty() ? null : tipos.get(0);
             if ("bytea".equalsIgnoreCase(tipo)) {
                 log.warn("SCHEMA INCONSISTENTE: usuarios.email esta como bytea em vez de texto. "
                         + "Corrigindo o tipo da coluna (dados existentes sao reinterpretados como UTF-8, sem perda).");
