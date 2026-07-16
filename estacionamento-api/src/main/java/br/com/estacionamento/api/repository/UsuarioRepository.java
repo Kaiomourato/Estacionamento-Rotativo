@@ -26,6 +26,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     // NOVO (painel ADM): gráfico de crescimento de usuários cadastrados
     List<Usuario> findByCriadoEmIsNotNullOrderByCriadoEmAsc();
 
+    // Operadores vinculados a um estacionamento (para notificar todos ao receber uma nova reserva)
+    List<Usuario> findByEstacionamentoIdAndRole(Long estacionamentoId, String role);
+
     // NOVO (painel ADM): listagem paginada e pesquisável para as páginas Usuários/Operadores
     @Query("SELECT u FROM Usuario u WHERE " +
             "(:role IS NULL OR u.role = :role) AND " +

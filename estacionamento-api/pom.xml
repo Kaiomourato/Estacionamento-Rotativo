@@ -68,6 +68,13 @@
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+
+		<!-- FIREBASE ADMIN (envio de push notifications via FCM) -->
+		<dependency>
+			<groupId>com.google.firebase</groupId>
+			<artifactId>firebase-admin</artifactId>
+			<version>9.3.0</version>
+		</dependency>
 		
 		<!-- TESTES (APENAS ESTA DEPENDÊNCIA) -->
 		<dependency>
