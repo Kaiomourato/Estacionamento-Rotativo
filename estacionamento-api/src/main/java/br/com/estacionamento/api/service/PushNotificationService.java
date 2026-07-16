@@ -13,6 +13,7 @@ import com.google.firebase.messaging.MessagingErrorCode;
 import com.google.firebase.messaging.Notification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,9 @@ import java.util.List;
 // real via Firebase Cloud Messaging, para chegar ao usuário mesmo com a aba/app fechados.
 // FirebaseMessaging pode ser null (ver FirebaseConfig) quando a credencial não está configurada
 // — nesse caso o envio é pulado silenciosamente, sem quebrar o fluxo de criação da notificação.
+// Usa ObjectProvider em vez de injeção direta: um @Bean que retorna null não gera um FirebaseMessaging
+// "nulo" injetável — o Spring trata como bean inexistente e lança NoSuchBeanDefinitionException na
+// injeção obrigatória, derrubando o ApplicationContext inteiro sempre que a credencial não existisse.
 @Service
 public class PushNotificationService {
 
@@ -31,9 +35,10 @@ public class PushNotificationService {
     private final DispositivoFcmRepository dispositivoFcmRepository;
     private final UsuarioRepository usuarioRepository;
 
-    public PushNotificationService(FirebaseMessaging firebaseMessaging, DispositivoFcmRepository dispositivoFcmRepository,
+    public PushNotificationService(ObjectProvider<FirebaseMessaging> firebaseMessagingProvider,
+                                    DispositivoFcmRepository dispositivoFcmRepository,
                                     UsuarioRepository usuarioRepository) {
-        this.firebaseMessaging = firebaseMessaging;
+        this.firebaseMessaging = firebaseMessagingProvider.getIfAvailable();
         this.dispositivoFcmRepository = dispositivoFcmRepository;
         this.usuarioRepository = usuarioRepository;
     }
