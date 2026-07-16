@@ -3,6 +3,8 @@ package br.com.estacionamento.api.service;
 import br.com.estacionamento.api.model.LogAcesso;
 import br.com.estacionamento.api.model.TipoEventoLog;
 import br.com.estacionamento.api.repository.LogAcessoRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,10 @@ import java.util.List;
 
 @Service
 public class AuditoriaService {
+
+    // Nome "logger" (não "log") de propósito: o método gerarCsv já usa "log" como
+    // variável de laço (LogAcesso), e um campo com o mesmo nome ficaria confuso.
+    private static final Logger logger = LoggerFactory.getLogger(AuditoriaService.class);
 
     private static final DateTimeFormatter FMT_CSV = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
@@ -28,8 +34,20 @@ public class AuditoriaService {
         LocalDateTime desde = dataInicial != null ? dataInicial.atStartOfDay() : null;
         LocalDateTime ate = dataFinal != null ? dataFinal.plusDays(1).atStartOfDay() : null;
         TipoEventoLog tipo = parseTipoEvento(tipoEvento);
-        return repository.buscarComFiltros(vazioParaNulo(usuarioEmail), desde, ate, tipo, vazioParaNulo(rota),
-                vazioParaNulo(role), status, pageable);
+        // DIAGNÓSTICO TEMPORÁRIO — investigação do 500 intermitente em produção. Remover
+        // depois de identificada a causa raiz.
+        long inicio = System.currentTimeMillis();
+        try {
+            Page<LogAcesso> resultado = repository.buscarComFiltros(vazioParaNulo(usuarioEmail), desde, ate, tipo,
+                    vazioParaNulo(rota), vazioParaNulo(role), status, pageable);
+            logger.info("[DIAG]   logAcessoRepository.buscarComFiltros -> {}ms (totalElements={})",
+                    System.currentTimeMillis() - inicio, resultado.getTotalElements());
+            return resultado;
+        } catch (Exception e) {
+            logger.error("[DIAG]   logAcessoRepository.buscarComFiltros FALHOU após {}ms — {}: {}",
+                    System.currentTimeMillis() - inicio, e.getClass().getName(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     // Mesma busca, sem paginação — usada pela exportação em CSV

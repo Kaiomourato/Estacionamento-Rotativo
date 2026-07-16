@@ -5,6 +5,8 @@ import br.com.estacionamento.api.dto.UsuarioResumoDTO;
 import br.com.estacionamento.api.model.Estadia;
 import br.com.estacionamento.api.model.Vaga;
 import br.com.estacionamento.api.service.AdminDashboardService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,6 +23,8 @@ import java.util.List;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
+
     private final AdminDashboardService service;
 
     public AdminController(AdminDashboardService service) {
@@ -32,7 +36,19 @@ public class AdminController {
     // semana, mês, ano, últimos 12 meses) são sempre fixas — sem filtro de período arbitrário.
     @GetMapping("/dashboard")
     public ResponseEntity<DashboardAdminDTO> dashboard(@RequestParam(required = false) Long estacionamentoId) {
-        return ResponseEntity.ok(service.montarDashboard(estacionamentoId));
+        // DIAGNÓSTICO TEMPORÁRIO — investigação do 500 intermitente em produção. Remover
+        // depois de identificada a causa raiz (ver AdminDashboardService/AuditoriaService).
+        long inicio = System.currentTimeMillis();
+        log.info("[DIAG] GET /admin/dashboard iniciado (estacionamentoId={})", estacionamentoId);
+        try {
+            DashboardAdminDTO resultado = service.montarDashboard(estacionamentoId);
+            log.info("[DIAG] GET /admin/dashboard concluído em {}ms", System.currentTimeMillis() - inicio);
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            log.error("[DIAG] GET /admin/dashboard FALHOU após {}ms — {}: {}",
+                    System.currentTimeMillis() - inicio, e.getClass().getName(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     // Últimos usuários cadastrados (widget do dashboard)
@@ -47,7 +63,20 @@ public class AdminController {
             @RequestParam(required = false) String role,
             @RequestParam(required = false) String busca,
             Pageable pageable) {
-        return ResponseEntity.ok(service.listarUsuariosPaginado(role, busca, pageable));
+        // DIAGNÓSTICO TEMPORÁRIO — ver comentário acima
+        long inicio = System.currentTimeMillis();
+        log.info("[DIAG] GET /admin/usuarios iniciado (role={}, busca={}, page={}, size={})",
+                role, busca, pageable.getPageNumber(), pageable.getPageSize());
+        try {
+            Page<UsuarioResumoDTO> resultado = service.listarUsuariosPaginado(role, busca, pageable);
+            log.info("[DIAG] GET /admin/usuarios concluído em {}ms (totalElements={})",
+                    System.currentTimeMillis() - inicio, resultado.getTotalElements());
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            log.error("[DIAG] GET /admin/usuarios FALHOU após {}ms — {}: {}",
+                    System.currentTimeMillis() - inicio, e.getClass().getName(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     // Página Vagas: todas as vagas de todos os estacionamentos, paginada e pesquisável
@@ -56,7 +85,20 @@ public class AdminController {
             @RequestParam(required = false) Long estacionamentoId,
             @RequestParam(required = false) String busca,
             Pageable pageable) {
-        return ResponseEntity.ok(service.listarVagasPaginado(estacionamentoId, busca, pageable));
+        // DIAGNÓSTICO TEMPORÁRIO — ver comentário acima
+        long inicio = System.currentTimeMillis();
+        log.info("[DIAG] GET /admin/vagas iniciado (estacionamentoId={}, busca={}, page={}, size={})",
+                estacionamentoId, busca, pageable.getPageNumber(), pageable.getPageSize());
+        try {
+            Page<Vaga> resultado = service.listarVagasPaginado(estacionamentoId, busca, pageable);
+            log.info("[DIAG] GET /admin/vagas concluído em {}ms (totalElements={})",
+                    System.currentTimeMillis() - inicio, resultado.getTotalElements());
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            log.error("[DIAG] GET /admin/vagas FALHOU após {}ms — {}: {}",
+                    System.currentTimeMillis() - inicio, e.getClass().getName(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     // Página Pagamentos: estadias finalizadas, com filtro opcional de estacionamento e período
@@ -66,7 +108,20 @@ public class AdminController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate inicio,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fim,
             Pageable pageable) {
-        return ResponseEntity.ok(service.listarPagamentosPaginado(estacionamentoId, inicio, fim, pageable));
+        // DIAGNÓSTICO TEMPORÁRIO — ver comentário acima
+        long inicioMs = System.currentTimeMillis();
+        log.info("[DIAG] GET /admin/pagamentos iniciado (estacionamentoId={}, inicio={}, fim={}, page={}, size={})",
+                estacionamentoId, inicio, fim, pageable.getPageNumber(), pageable.getPageSize());
+        try {
+            Page<Estadia> resultado = service.listarPagamentosPaginado(estacionamentoId, inicio, fim, pageable);
+            log.info("[DIAG] GET /admin/pagamentos concluído em {}ms (totalElements={})",
+                    System.currentTimeMillis() - inicioMs, resultado.getTotalElements());
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            log.error("[DIAG] GET /admin/pagamentos FALHOU após {}ms — {}: {}",
+                    System.currentTimeMillis() - inicioMs, e.getClass().getName(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     // Últimos check-ins (tabela do dashboard), opcionalmente filtrado por estacionamento

@@ -4,6 +4,8 @@ import br.com.estacionamento.api.model.LogAcesso;
 import br.com.estacionamento.api.model.TipoEventoLog;
 import br.com.estacionamento.api.service.AuditoriaService;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -23,6 +25,8 @@ import java.util.List;
 @PreAuthorize("hasRole('ADMIN')")
 public class AuditoriaController {
 
+    private static final Logger log = LoggerFactory.getLogger(AuditoriaController.class);
+
     private final AuditoriaService service;
 
     public AuditoriaController(AuditoriaService service) {
@@ -39,7 +43,21 @@ public class AuditoriaController {
             @RequestParam(required = false) String role,
             @RequestParam(required = false) Integer status,
             Pageable pageable) {
-        return ResponseEntity.ok(service.buscar(usuarioEmail, dataInicial, dataFinal, tipoEvento, rota, role, status, pageable));
+        // DIAGNÓSTICO TEMPORÁRIO — investigação do 500 intermitente em produção. Remover
+        // depois de identificada a causa raiz.
+        long inicio = System.currentTimeMillis();
+        log.info("[DIAG] GET /admin/auditoria iniciado (usuarioEmail={}, tipoEvento={}, role={}, status={}, page={}, size={})",
+                usuarioEmail, tipoEvento, role, status, pageable.getPageNumber(), pageable.getPageSize());
+        try {
+            Page<LogAcesso> resultado = service.buscar(usuarioEmail, dataInicial, dataFinal, tipoEvento, rota, role, status, pageable);
+            log.info("[DIAG] GET /admin/auditoria concluído em {}ms (totalElements={})",
+                    System.currentTimeMillis() - inicio, resultado.getTotalElements());
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            log.error("[DIAG] GET /admin/auditoria FALHOU após {}ms — {}: {}",
+                    System.currentTimeMillis() - inicio, e.getClass().getName(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     // Valores fixos do enum, para popular o filtro "Tipo de evento" no frontend

@@ -19,6 +19,8 @@ import br.com.estacionamento.api.repository.EstadiaRepository;
 import br.com.estacionamento.api.repository.LogAcessoRepository;
 import br.com.estacionamento.api.repository.UsuarioRepository;
 import br.com.estacionamento.api.repository.VagaRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +43,8 @@ import java.util.stream.IntStream;
 // financeira já usada no painel do operador (EstadiaService), sem duplicar lógica.
 @Service
 public class AdminDashboardService {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminDashboardService.class);
 
     private static final String[] MESES_PT = {
             "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"
@@ -65,24 +69,46 @@ public class AdminDashboardService {
     }
 
     public DashboardAdminDTO montarDashboard(Long estacionamentoId) {
-        List<Estacionamento> estacionamentos = estacionamentoRepository.findAllComVagas();
+        // DIAGNÓSTICO TEMPORÁRIO — investigação do 500 intermitente em produção. Cada
+        // etapa é uma consulta ao banco separada; o log aponta exatamente qual delas não
+        // termina (trava) ou lança exceção. Remover depois de identificada a causa raiz.
+        long t0 = System.currentTimeMillis();
 
-        RelatorioOperadorDTO financeiro = estacionamentoId != null
+        List<Estacionamento> estacionamentos = medir("findAllComVagas", () -> estacionamentoRepository.findAllComVagas());
+
+        RelatorioOperadorDTO financeiro = medir("gerarRelatorio(Global/PorEstacionamento)", () -> estacionamentoId != null
                 ? estadiaService.gerarRelatorioPorEstacionamento(buscarEstacionamento(estacionamentoId))
-                : estadiaService.gerarRelatorioGlobal();
+                : estadiaService.gerarRelatorioGlobal());
 
         LocalDateTime inicioMes = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        List<Estadia> checkoutsMes = buscarSaidasDesde(estacionamentoId, inicioMes);
+        List<Estadia> checkoutsMes = medir("buscarSaidasDesde(inicioMes)", () -> buscarSaidasDesde(estacionamentoId, inicioMes));
 
-        List<SerieContagemDTO> checkinsPorMes = montarCheckinsPorMes(estacionamentoId);
-        List<SerieContagemDTO> horariosMovimento = montarHorariosMovimento(estacionamentoId);
-        List<SerieContagemDTO> crescimentoUsuarios = montarCrescimentoUsuarios();
-        List<RankingEstacionamentoDTO> topEstacionamentos = montarTopEstacionamentos(estacionamentos);
+        List<SerieContagemDTO> checkinsPorMes = medir("montarCheckinsPorMes", () -> montarCheckinsPorMes(estacionamentoId));
+        List<SerieContagemDTO> horariosMovimento = medir("montarHorariosMovimento", () -> montarHorariosMovimento(estacionamentoId));
+        List<SerieContagemDTO> crescimentoUsuarios = medir("montarCrescimentoUsuarios", this::montarCrescimentoUsuarios);
+        List<RankingEstacionamentoDTO> topEstacionamentos = medir("montarTopEstacionamentos", () -> montarTopEstacionamentos(estacionamentos));
 
-        CardsAdminDTO cards = montarCards(estacionamentoId, estacionamentos, financeiro, checkoutsMes);
-        IndicadoresAdminDTO indicadores = montarIndicadores(estacionamentoId, financeiro, crescimentoUsuarios, topEstacionamentos, checkoutsMes);
+        CardsAdminDTO cards = medir("montarCards", () -> montarCards(estacionamentoId, estacionamentos, financeiro, checkoutsMes));
+        IndicadoresAdminDTO indicadores = medir("montarIndicadores", () ->
+                montarIndicadores(estacionamentoId, financeiro, crescimentoUsuarios, topEstacionamentos, checkoutsMes));
 
+        log.info("[DIAG] montarDashboard TOTAL: {}ms", System.currentTimeMillis() - t0);
         return new DashboardAdminDTO(cards, indicadores, financeiro, checkinsPorMes, horariosMovimento, crescimentoUsuarios, topEstacionamentos);
+    }
+
+    // DIAGNÓSTICO TEMPORÁRIO: mede e loga cada etapa de montarDashboard individualmente,
+    // e relança qualquer exceção com o nome da etapa onde ela ocorreu.
+    private <T> T medir(String etapa, java.util.function.Supplier<T> acao) {
+        long inicio = System.currentTimeMillis();
+        try {
+            T resultado = acao.get();
+            log.info("[DIAG]   {} -> {}ms", etapa, System.currentTimeMillis() - inicio);
+            return resultado;
+        } catch (Exception e) {
+            log.error("[DIAG]   {} FALHOU após {}ms — {}: {}",
+                    etapa, System.currentTimeMillis() - inicio, e.getClass().getName(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     private Estacionamento buscarEstacionamento(Long id) {
@@ -261,7 +287,12 @@ public class AdminDashboardService {
     // Listagem paginada e pesquisável — usada nas páginas Usuários e Operadores
     // (Operadores = mesma listagem com role fixado em "OPERADOR")
     public Page<UsuarioResumoDTO> listarUsuariosPaginado(String role, String busca, Pageable pageable) {
-        return usuarioRepository.buscarParaAdmin(vazioParaNulo(role), vazioParaNulo(busca), pageable).map(this::paraResumo);
+        // DIAGNÓSTICO TEMPORÁRIO: separa a consulta ao banco da conversão para DTO, para
+        // saber se uma falha está na query (buscarParaAdmin) ou na montagem do DTO
+        // (paraResumo, que acessa usuario.getEstacionamento()).
+        Page<Usuario> pagina = medir("usuarioRepository.buscarParaAdmin", () ->
+                usuarioRepository.buscarParaAdmin(vazioParaNulo(role), vazioParaNulo(busca), pageable));
+        return medir("map(paraResumo) x" + pagina.getNumberOfElements(), () -> pagina.map(this::paraResumo));
     }
 
     private UsuarioResumoDTO paraResumo(Usuario u) {
@@ -291,14 +322,18 @@ public class AdminDashboardService {
 
     // Página Vagas: todas as vagas de todos os estacionamentos, paginada e pesquisável
     public Page<Vaga> listarVagasPaginado(Long estacionamentoId, String busca, Pageable pageable) {
-        return vagaRepository.buscarParaAdmin(estacionamentoId, vazioParaNulo(busca), pageable);
+        // DIAGNÓSTICO TEMPORÁRIO — ver comentário em montarDashboard/medir
+        return medir("vagaRepository.buscarParaAdmin", () ->
+                vagaRepository.buscarParaAdmin(estacionamentoId, vazioParaNulo(busca), pageable));
     }
 
     // Página Pagamentos: estadias finalizadas (com valor calculado no check-out)
     public Page<Estadia> listarPagamentosPaginado(Long estacionamentoId, LocalDate inicio, LocalDate fim, Pageable pageable) {
         LocalDateTime desde = inicio != null ? inicio.atStartOfDay() : null;
         LocalDateTime ate = fim != null ? fim.plusDays(1).atStartOfDay() : null;
-        return estadiaRepository.buscarPagamentos(estacionamentoId, desde, ate, pageable);
+        // DIAGNÓSTICO TEMPORÁRIO — ver comentário em montarDashboard/medir
+        return medir("estadiaRepository.buscarPagamentos", () ->
+                estadiaRepository.buscarPagamentos(estacionamentoId, desde, ate, pageable));
     }
 
     private String vazioParaNulo(String valor) {
