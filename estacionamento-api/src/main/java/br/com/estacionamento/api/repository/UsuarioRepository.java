@@ -30,9 +30,13 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     List<Usuario> findByEstacionamentoIdAndRole(Long estacionamentoId, String role);
 
     // NOVO (painel ADM): listagem paginada e pesquisável para as páginas Usuários/Operadores
+    // CAST(:busca AS string): sem isso, o Postgres falha com "function lower(bytea) does
+    // not exist" sempre que :busca é null — sem um valor para inferir o tipo, ele resolve
+    // o parâmetro de CONCAT/LOWER como bytea em vez de text. O CAST fixa o tipo do bind
+    // independente do valor, então o "IS NULL" continua funcionando normalmente.
     @Query("SELECT u FROM Usuario u WHERE " +
             "(:role IS NULL OR u.role = :role) AND " +
-            "(:busca IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :busca, '%'))) " +
+            "(:busca IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%'))) " +
             "ORDER BY u.id DESC")
     Page<Usuario> buscarParaAdmin(@Param("role") String role, @Param("busca") String busca, Pageable pageable);
 }

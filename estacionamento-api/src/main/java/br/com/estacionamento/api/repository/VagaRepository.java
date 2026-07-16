@@ -18,9 +18,12 @@ public interface VagaRepository extends JpaRepository<Vaga, Long> {
     Optional<Vaga> findByEstacionamentoIdAndCodigoAndAtivoTrue(Long estacionamentoId, String codigo);
 
     // NOVO (painel ADM): listagem paginada e pesquisável de vagas de todos os estacionamentos
+    // CAST(:busca AS string): sem isso, o Postgres falha com "function lower(bytea) does
+    // not exist" sempre que :busca é null (sem valor para inferir o tipo do bind do
+    // CONCAT/LOWER, ele resolve como bytea). O CAST fixa o tipo independente do valor.
     @Query("SELECT v FROM Vaga v WHERE " +
             "(:estacionamentoId IS NULL OR v.estacionamento.id = :estacionamentoId) AND " +
-            "(:busca IS NULL OR LOWER(v.codigo) LIKE LOWER(CONCAT('%', :busca, '%'))) " +
+            "(:busca IS NULL OR LOWER(v.codigo) LIKE LOWER(CONCAT('%', CAST(:busca AS string), '%'))) " +
             "ORDER BY v.estacionamento.id, v.codigo")
     Page<Vaga> buscarParaAdmin(@Param("estacionamentoId") Long estacionamentoId, @Param("busca") String busca, Pageable pageable);
 }

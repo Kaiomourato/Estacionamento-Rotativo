@@ -25,12 +25,16 @@ public interface LogAcessoRepository extends JpaRepository<LogAcesso, Long> {
     // NOVO (auditoria): busca paginada com todos os filtros da tela de Auditoria.
     // Usada tanto para a listagem (com Pageable normal) quanto para a exportação em
     // CSV (chamada com Pageable.unpaged(), sem LIMIT/OFFSET).
+    // CAST(:usuarioEmail/:rota AS string): sem isso, o Postgres falha com "function
+    // lower(bytea) does not exist" sempre que o parâmetro é null (sem valor pra inferir
+    // o tipo do bind do CONCAT/LOWER, ele resolve como bytea). O CAST fixa o tipo
+    // independente do valor, então o "IS NULL" continua funcionando normalmente.
     @Query("SELECT l FROM LogAcesso l WHERE " +
-            "(:usuarioEmail IS NULL OR LOWER(l.usuarioEmail) LIKE LOWER(CONCAT('%', :usuarioEmail, '%'))) AND " +
+            "(:usuarioEmail IS NULL OR LOWER(l.usuarioEmail) LIKE LOWER(CONCAT('%', CAST(:usuarioEmail AS string), '%'))) AND " +
             "(:desde IS NULL OR l.dataHora >= :desde) AND " +
             "(:ate IS NULL OR l.dataHora < :ate) AND " +
             "(:tipoEvento IS NULL OR l.tipoEvento = :tipoEvento) AND " +
-            "(:rota IS NULL OR LOWER(l.rota) LIKE LOWER(CONCAT('%', :rota, '%'))) AND " +
+            "(:rota IS NULL OR LOWER(l.rota) LIKE LOWER(CONCAT('%', CAST(:rota AS string), '%'))) AND " +
             "(:role IS NULL OR l.role = :role) AND " +
             "(:status IS NULL OR l.status = :status) " +
             "ORDER BY l.dataHora DESC")
