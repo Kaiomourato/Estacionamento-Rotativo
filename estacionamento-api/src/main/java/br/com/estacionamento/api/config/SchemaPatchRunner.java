@@ -24,6 +24,13 @@ import java.util.Map;
  *   garante que existam mesmo que o ddl-auto ainda não tenha sido aplicado
  *   no banco em uso (ex.: usuário do banco sem permissão de ALTER TABLE em
  *   tabelas pré-existentes).
+ * - "usuarios.email" como bytea em vez de texto: o ddl-auto=update nunca corrige
+ *   o tipo de uma coluna que já existe. Toda busca em /admin/usuarios que usa
+ *   lower(email) quebrava com "ERROR: function lower(bytea) does not exist"
+ *   (500 sempre, em toda chamada — não intermitente; confirmado via log [DIAG]
+ *   em AdminController/AdminDashboardService). Os dados gravados nessa coluna
+ *   sempre foram os bytes UTF-8 do e-mail normal, então corrigir o tipo não
+ *   perde nenhum dado existente.
  *
  * Roda uma vez na subida da aplicação, depois que o Hibernate já aplicou o
  * próprio ddl-auto. Cada comando é independente e idempotente.
@@ -109,6 +116,8 @@ public class SchemaPatchRunner implements CommandLineRunner {
                 "criado_em TIMESTAMP NOT NULL, " +
                 "estadia_id BIGINT)");
 
+        corrigirTipoColunaEmailUsuarios();
+
         verificarColunasEstadia();
         verificarTabelaNotificacoes();
     }
@@ -121,6 +130,25 @@ public class SchemaPatchRunner implements CommandLineRunner {
             // Loga em ERROR com a stacktrace completa: a causa real (ex.: permissão
             // negada, SQLState, etc.) precisa aparecer nos logs, não só a mensagem.
             log.error("Falha ao aplicar patch de schema [{}]", sql, e);
+        }
+    }
+
+    // Corrige usuarios.email quando a coluna ficou como bytea em vez de texto (ver
+    // Javadoc da classe). Só altera o tipo se o information_schema confirmar que a
+    // coluna está mesmo como bytea — em bancos já corretos (H2 dos testes, Postgres
+    // já corrigido) isso é um no-op silencioso.
+    private void corrigirTipoColunaEmailUsuarios() {
+        try {
+            String tipo = jdbcTemplate.queryForObject(
+                    "SELECT data_type FROM information_schema.columns WHERE LOWER(table_name) = 'usuarios' AND LOWER(column_name) = 'email'",
+                    String.class);
+            if ("bytea".equalsIgnoreCase(tipo)) {
+                log.warn("SCHEMA INCONSISTENTE: usuarios.email esta como bytea em vez de texto. "
+                        + "Corrigindo o tipo da coluna (dados existentes sao reinterpretados como UTF-8, sem perda).");
+                executar("ALTER TABLE usuarios ALTER COLUMN email TYPE VARCHAR(255) USING convert_from(email, 'UTF8')");
+            }
+        } catch (Exception e) {
+            log.error("Falha ao verificar/corrigir o tipo da coluna usuarios.email", e);
         }
     }
 
