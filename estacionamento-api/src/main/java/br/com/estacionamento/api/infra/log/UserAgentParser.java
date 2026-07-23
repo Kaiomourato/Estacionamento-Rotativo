@@ -1,6 +1,7 @@
 package br.com.estacionamento.api.infra.log;
 
 
+
 // Extração heurística e leve de navegador/sistema operacional a partir do header
 // User-Agent — sem depender de nenhuma biblioteca externa de parsing.
 public final class UserAgentParser {
