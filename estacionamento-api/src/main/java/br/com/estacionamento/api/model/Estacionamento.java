@@ -6,7 +6,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "estacionamentos")
@@ -88,5 +90,21 @@ public class Estacionamento {
 
     public long getVagasLivres() {
         return getVagasTotais() - getVagasOcupadas();
+    }
+
+    // Tipos de veículo aceitos, usado no filtro de busca do painel do motorista.
+    // Vaga.tipoVeiculo nulo = aceita qualquer tipo; se nenhuma vaga ativa tiver um
+    // tipo restrito (ou não houver vagas cadastradas ainda), o estacionamento é
+    // considerado compatível com todos os tipos.
+    public List<TipoVeiculo> getTiposAceitos() {
+        if (vagas == null || vagas.isEmpty()) return List.of(TipoVeiculo.values());
+
+        Set<TipoVeiculo> tipos = EnumSet.noneOf(TipoVeiculo.class);
+        for (Vaga vaga : vagas) {
+            if (!vaga.isAtivo()) continue;
+            if (vaga.getTipoVeiculo() == null) return List.of(TipoVeiculo.values());
+            tipos.add(vaga.getTipoVeiculo());
+        }
+        return tipos.isEmpty() ? List.of(TipoVeiculo.values()) : List.copyOf(tipos);
     }
 }
